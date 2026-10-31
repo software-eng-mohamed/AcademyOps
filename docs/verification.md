@@ -16,6 +16,9 @@ provides a separate check of its pinned environment.
 
 ## Completed local checks
 
+The browser results below cover unchanged application code carried into the hosted release
+revision. These Windows measurements complement the separate Linux checks recorded below.
+
 | Area                                | Result                                                                                                                                                   |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | API                                 | 738 unique tests passed, including PostgreSQL/Redis integration, the opt-in Chromium test, packaging and fixture-isolation regressions                   |
@@ -39,82 +42,47 @@ recaptured from the final AcademyOps production build and synthetic database, in
 new login mark, mobile header, English/Arabic layouts and both themes. Their figures are not
 business results. The live suites completed without retries, flaky results or skipped tests.
 
-## Repository recreation
+## Hosted release verification
 
-The hosted results below belong to the previous GitHub repository instance. Its run IDs,
-commit IDs and alert numbers are preserved as historical identifiers. Fresh CI, Browser
-acceptance, Security and OTP image checks for the recreated repository are pending, including
-a new CodeQL analysis and review of its resulting alerts.
+All four hosted workflows passed for release commit
+[`44f1bb94234c322a825441457d46139756b037a2`](https://github.com/software-eng-mohamed/AcademyOps/commit/44f1bb94234c322a825441457d46139756b037a2)
+in the current repository.
 
-The pre-recreation review removed the three historical OpenSSL exclusions from `.trivyignore`.
-The exact recorded backend/web runtime contained `libssl3t64` version `3.5.7-1~deb13u3`, and
-the OTP runtime installed OpenSSL `3.0.22-1~deb12u2`. Debian marks those versions fixed for
-[CVE-2026-31790](https://security-tracker.debian.org/tracker/CVE-2026-31790),
-[CVE-2026-45447](https://security-tracker.debian.org/tracker/CVE-2026-45447) and
-[CVE-2026-34182](https://security-tracker.debian.org/tracker/CVE-2026-34182).
-This package-version check is separate from a fresh image vulnerability inventory; the new
-image gates must run with no CVE IDs excluded.
+| Workflow                                                                                           | Recorded result                                                                                                                                                        |
+| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [CI](https://github.com/software-eng-mohamed/AcademyOps/actions/runs/41225173123)                  | Passed: tests, lint, types, schema and 221-operation contract gates, production image checks and all seven production build tasks.                                     |
+| [Browser acceptance](https://github.com/software-eng-mohamed/AcademyOps/actions/runs/41225173090)  | Passed: 1 real API Chromium integration test and all 20 UI scenarios.                                                                                                  |
+| [Security](https://github.com/software-eng-mohamed/AcademyOps/actions/runs/41225172996)            | Passed: Gitleaks scanned the single-commit history; all six Semgrep scopes, both Linux secret-generator tests and the 103-rule CodeQL analysis completed successfully. |
+| [OTP connector image](https://github.com/software-eng-mohamed/AcademyOps/actions/runs/41225173183) | Passed: isolated image build, non-root runtime assertion, vulnerability inventory and blocking gate.                                                                   |
 
-## Historical Linux CI
+The main test job passed 737 API tests; its opt-in browser case passed separately in Browser
+acceptance. Both real-generator regressions check that generated credentials remain absent from stdout
+and stderr; the Linux run also passed the `0600` file-mode assertions. Dependency review is
+reserved for pull requests.
 
-All four hosted workflows passed for implementation commit
-`3d1b664141fec8fa70791e07cbef17d081941bd9` in the previous repository instance.
-These results apply to that exact historical revision.
+The image inventories excluded no vulnerability IDs; `.trivyignore` contains no ID exclusions.
+The API/backend and web images each reported **24 medium OS package findings**, with no high
+or critical findings. The OTP image reported **2,529 OS package findings**: 2,047 medium,
+462 high and 20 critical. All Node-package tables reported zero findings. A CVE can appear
+against several packages, so these are package findings rather than unique vulnerabilities.
+All blocking scans returned zero findings with `ignore-unfixed: true`, which omits findings
+without an available fix; that passing gate does not mean the images have no known vulnerabilities.
 
-| Workflow and former run ID          | Recorded result                                                                                                                                                            |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CI — `41219812512`                  | Code, schema, contract and dependency gates; automated tests; production builds; container runtime checks; Compose/Caddy validation; and signed release provenance passed. |
-| Browser acceptance — `41219812523`  | Real API Chromium integration passed (1 test), followed by all 20 localized UI/navigation scenarios.                                                                       |
-| Security — `41219812516`            | Full-history Gitleaks and all six Semgrep scopes passed.                                                                                                                   |
-| OTP connector image — `41219812521` | Isolated image build, non-root runtime assertion, vulnerability inventory and blocking gate passed.                                                                        |
+## CodeQL review and evidence boundaries
 
-The main test job passed 737 API tests; its one opt-in browser case was skipped there and
-passed separately in Browser acceptance.
+CodeQL analysis `2068970570` reported ten previously reviewed findings. Their rule, path and
+line matched the prior review, and exact Git-blob comparisons confirmed identical affected
+source files. The findings were closed with recorded reasons: seven false positives, one
+test-only value and two developer-tool pathname races accepted for the inspected callers.
+The corrected secret-output issue was absent. No scan rules were weakened to obtain these results.
 
-CodeQL was skipped because the previous repository was private during this recorded run;
-dependency review runs on pull requests. Current analyses will be listed in the
-[Security workflow](https://github.com/software-eng-mohamed/AcademyOps/actions/workflows/security.yml).
-
-The backend and web image inventories each reported **24 medium OS package findings**, with
-no high or critical findings. The OTP image reported **2,529 OS package findings**: 2,047
-medium, 462 high and 20 critical. The Node-package tables reported no findings. These counts
-reflect the historical Trivy exclusions (`CVE-2026-45447`, `CVE-2026-31790` and
-`CVE-2026-34182`) and can list the same CVE against several packages; they are not counts of
-unique vulnerabilities. All blocking scans in those recorded runs returned zero findings with
-`ignore-unfixed: true`; that gate does not mean the images have no known vulnerabilities.
-
-## Historical public CodeQL review
-
-The previous repository's first public Security run, `41221276065`, reported 11 CodeQL alerts
-on commit `366a0965d545213d071955946cae9eb5b5408819`.
-The confirmed secret-output issue was corrected in both cluster-secret generators. Two isolated
-regression tests execute the actual scripts and check that generated credentials stay out of
-stdout and stderr. Together with journey guards, all 14 tests passed locally; the five development
-readiness tests also passed through `pnpm test:scripts`.
-
-The other ten alerts were reviewed as `not_actionable` for the inspected call paths and shipped
-deployment settings. The numbers below belong to that previous repository instance:
-
-| Former alert IDs | Recorded boundary evidence                                                                                                                                                                     |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1                | The shipped HTTPS deployment enables Content Security Policy.                                                                                                                                  |
-| 2, 3, 4          | Uploads use scoped UUID keys and server-computed hashes; local paths are confined to the storage root, and production uses R2.                                                                 |
-| 6, 7             | The hashes protect random 256-bit tokens or 80-bit recovery tokens with a pepper; actual passwords use Argon2id.                                                                               |
-| 8                | The value is a test token.                                                                                                                                                                     |
-| 9, 10            | Developer-tool pathname races exist, with no established privilege boundary in their supported callers.                                                                                        |
-| 11               | The authorized certificate-upload endpoint stores bounded, validated and malware-scanned PDF bytes under a server-derived private key; the original filename does not select the storage path. |
-
-The previous repository's post-fix Security run, `41222676662`, passed on commit
-`6ece3e39ceca6194136ff322852a685209292bce`:
-both real-generator tests ran on Ubuntu, including the `0600` assertions; full-history Gitleaks,
-all six Semgrep scopes and CodeQL passed. In that repository, CodeQL marked alert 5 fixed. The other ten were closed
-with recorded review reasons: seven false positives, one test-only value and two local-tool races
-accepted for the inspected callers. No scan rules or exclusions were weakened during that review.
-These alert IDs and dispositions do not carry over to the recreated repository.
-
-These decisions apply to the reviewed configuration. Local path containment is lexical, not
-protection against pre-existing symlinks; no remote link-creation path was found. Shared,
-attacker-writable storage or privileged execution of developer tools needs a separate review.
+The review covers the shipped HTTPS/CSP configuration, scoped UUID upload keys with
+server-computed hashes, random token hashes and Argon2id password hashing. Authorized PDF
+uploads store bounded, validated and malware-scanned bytes under a server-derived private
+key; the original filename does not choose the storage path. Local path containment is lexical
+and does not protect against pre-existing symlinks. No remote link-creation path or supported
+privilege boundary for the local-tool races was found. Shared attacker-writable storage,
+privileged tool execution or changed deployment settings require reassessment.
 
 ## Local load smoke
 

@@ -29,7 +29,8 @@ tests run through `pnpm test`; they have separate database and Redis requirement
 The two secret-generator regressions execute the real Node.js and shell scripts in isolated
 temporary directories. They check generated credentials, matching connection settings and the
 absence of secret values from stdout and stderr. Windows uses Git Bash for the shell variant;
-the `0600` file-mode assertion also passed in the previous repository instance's Ubuntu Security
-workflow. Fresh hosted checks for the recreated repository are pending.
+the `0600` file-mode assertion also passed in the current
+[Ubuntu Security run](https://github.com/software-eng-mohamed/AcademyOps/actions/runs/41225172996)
+for release commit `44f1bb94234c322a825441457d46139756b037a2`.
 The recorded local result is 14 journey/generator tests and five development readiness tests
 passed. See the [verification record](../docs/verification.md) for the CodeQL review and its scope.

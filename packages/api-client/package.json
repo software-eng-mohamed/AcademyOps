@@ -52,7 +52,7 @@
   },
   "dependencies": {
     "@academyops/contracts": "workspace:*",
-    "openapi-fetch": "0.15.2"
+    "openapi-fetch": "0.17.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.10",

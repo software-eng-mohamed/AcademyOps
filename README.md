@@ -15,8 +15,10 @@ deployment automation. It targets one academy organization with branch- and role
 
 ## Preview
 
-The [interactive demo](docs/demo.md) runs these same screens against an internal mock API.
-It includes fictional academy data and browser-local changes, with no real payments or messages.
+[Open the live demo](https://academyops-demo.vercel.app) and sign in with the prefilled sample account.
+It runs these same screens against an internal mock API, with fictional academy data and
+browser-local changes. No real payments or messages are sent. See the [demo guide](docs/demo.md)
+for its supported workflows and local setup.
 
 These automated-test screenshots use **synthetic accounts and fixture data**. The figures shown
 are demonstration values, not production usage or business results.

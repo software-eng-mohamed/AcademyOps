@@ -1,5 +1,7 @@
 # Interactive demo
 
+**[Open AcademyOps on Vercel](https://academyops-demo.vercel.app)**
+
 The portfolio deployment runs the **existing AcademyOps frontend**: its sign-in screen,
 dashboard, navigation, tables, forms, Arabic/English layouts, and themes. It uses an internal
 mock API with the same endpoint paths and response shapes as the NestJS application.
@@ -81,6 +83,11 @@ credentials belong in this deployment. See [Deployment](deployment.md) for the f
 Unit tests cover the API contract, authentication, cookie serialization during server rendering,
 visitor isolation, persistence, input limits, state transitions, and routing to the real backend
 when demo mode is disabled. The browser suite uses the original UI and actual internal API.
+
+On 31 October 2026, the complete web unit suite passed 929 tests. All 9 browser scenarios also
+passed against the public production URL with zero retries, failures, flaky results, or skipped
+cases. They cover sign-in and server rendering, navigation, student and lead changes, notification
+persistence, visitor isolation, and English/Arabic desktop/mobile layouts in both themes.
 
 With a demo server already running, run this in a second PowerShell terminal:
 

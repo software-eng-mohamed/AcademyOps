@@ -80,3 +80,11 @@ jobs:
           NEXT_PUBLIC_POSTHOG_ENABLED: 'false'
           NEXT_PUBLIC_QUERY_DEVTOOLS: 'false'
         run: pnpm web:e2e current-demo.spec.ts --workers=1
+      - name: Preserve browser failure traces
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: browser-failure-traces
+          path: test-results/web/artifacts/
+          retention-days: 7
+          if-no-files-found: warn

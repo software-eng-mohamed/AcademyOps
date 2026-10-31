@@ -96,9 +96,19 @@ async function login(page: Page, locale: Locale = 'en') {
 
 async function search(page: Page, text: string) {
   const field = page.getByRole('searchbox', { name: 'Search', exact: true });
+  const resource = new URL(page.url()).pathname.split('/').at(-1);
+  const refreshed = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      response.request().method() === 'GET' &&
+      url.pathname === `/api/v1/${resource}` &&
+      url.searchParams.get('search') === text
+    );
+  });
   await field.fill(text);
   await field.press('Enter');
   await expect.poll(() => new URL(page.url()).searchParams.get('search')).toBe(text);
+  await successfulResponse(refreshed);
 }
 
 async function createPerson(page: Page, resource: 'students' | 'leads', name: string) {
@@ -271,6 +281,8 @@ test.describe('original application with the internal demo API', () => {
       await successfulResponse(saved);
       await expect(action).not.toBeVisible();
     }
+    // Finish mutation-triggered list refreshes before replacing this document.
+    await verify();
     await page.goto('/en/leads');
     await search(page, name);
     await expect(page.getByRole('row').filter({ hasText: name })).toContainText('Qualified');

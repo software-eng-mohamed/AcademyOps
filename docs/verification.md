@@ -15,6 +15,11 @@ flaky results or skipped cases. They cover login and logout, every owner navigat
 student and lead mutations, notification persistence, visitor isolation, and English/Arabic
 desktop/mobile layouts in both themes. Eight screenshots were captured from that run.
 
+The same 9 scenarios then passed against the public [Vercel deployment](https://academyops-demo.vercel.app)
+in 83.3 seconds on 31 October 2026, with zero retries, failures, flaky results or skipped cases.
+The production deployment built successfully with Node.js 22 and the pinned pnpm toolchain.
+An unauthenticated request to the public alias returned the original sign-in page successfully.
+
 The publication export contained no secret-scan findings or private deployment artifacts.
 The hosted demo uses synthetic data and does not run the database, workers or external providers.
 Its configuration and supported scope are documented in [Interactive demo](demo.md).

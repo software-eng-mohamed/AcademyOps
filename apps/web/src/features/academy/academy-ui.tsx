@@ -91,6 +91,8 @@ export function ErrorNotice({
 }) {
   const apiError = isPlgApiError(error) ? error : undefined;
   const domainMessages: Record<string, string> = {
+    DEMO_STORAGE_LIMIT: copy.demoStorageLimit,
+    DEMO_ACTION_UNAVAILABLE: copy.demoActionUnavailable,
     PAYMENT_ADJUSTMENT_CONFLICT: copy.paymentAdjustmentConflict,
     PAYMENT_ADJUSTMENT_ALLOCATION_CONFLICT: copy.paymentAllocationConflict,
     FINANCE_ALLOCATION_RECONCILIATION_REQUIRED: copy.financeReconciliationRequired,

@@ -35,5 +35,11 @@ export default async function LoginPage({ params }: { params: Promise<{ locale: 
   const currentUser = await readCurrentUser();
   if (currentUser) redirect(`/${locale}/dashboard`);
 
-  return <LoginScreen locale={locale} organizationCode={getOrganizationCode()} />;
+  return (
+    <LoginScreen
+      demo={process.env.ACADEMYOPS_DEMO_ONLY === 'true'}
+      locale={locale}
+      organizationCode={getOrganizationCode()}
+    />
+  );
 }

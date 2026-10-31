@@ -3,6 +3,22 @@
 Local checks completed on **31 October 2026** with synthetic data and the runtime configuration
 listed below.
 
+## Original-interface demo
+
+The optional portfolio deployment keeps the existing frontend and replaces its remote API
+with an isolated internal mock. The complete web unit suite passed **929 tests in 94 files**
+after this integration. The production Next.js build, TypeScript, generated API boundary check,
+formatting and source-line gates passed. Focused regressions cover server-rendered sessions,
+visitor isolation, bounded cookie persistence, original form contracts and domain transitions.
+All **9 original-interface browser scenarios** passed together with zero retries, failures,
+flaky results or skipped cases. They cover login and logout, every owner navigation page,
+student and lead mutations, notification persistence, visitor isolation, and English/Arabic
+desktop/mobile layouts in both themes. Eight screenshots were captured from that run.
+
+The publication export contained no secret-scan findings or private deployment artifacts.
+The hosted demo uses synthetic data and does not run the database, workers or external providers.
+Its configuration and supported scope are documented in [Interactive demo](demo.md).
+
 ## Environment
 
 - Windows, Node.js 24.16, pnpm 11.25, PostgreSQL 17.10 and Redis 8.10.3.
@@ -16,8 +32,8 @@ provides a separate check of its pinned environment.
 
 ## Completed local checks
 
-The browser results below cover unchanged application code carried into the hosted release
-revision. These Windows measurements complement the separate Linux checks recorded below.
+The following results record the full-application baseline before the optional mock API was added.
+These Windows measurements complement the separate Linux baseline checks recorded below.
 
 | Area                                | Result                                                                                                                                                   |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -42,7 +58,7 @@ recaptured from the final AcademyOps production build and synthetic database, in
 new login mark, mobile header, English/Arabic layouts and both themes. Their figures are not
 business results. The live suites completed without retries, flaky results or skipped tests.
 
-## Hosted release verification
+## Hosted full-application baseline
 
 All four hosted workflows passed for release commit
 [`44f1bb94234c322a825441457d46139756b037a2`](https://github.com/software-eng-mohamed/AcademyOps/commit/44f1bb94234c322a825441457d46139756b037a2)

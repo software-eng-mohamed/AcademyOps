@@ -24,21 +24,32 @@ if (typeof window !== 'undefined') {
   }
 }
 
-export function Providers({ children }: { children: ReactNode }) {
+export function Providers({
+  children,
+  disableAnalytics = false,
+}: {
+  children: ReactNode;
+  disableAnalytics?: boolean;
+}) {
   const [queryClient] = useState(createApiQueryClient);
+  const content = (
+    <TooltipProvider>
+      <ToastProvider>
+        {!disableAnalytics && <PostHogPageView />}
+        {!disableAnalytics && <PostHogWebVitals />}
+        {children}
+      </ToastProvider>
+    </TooltipProvider>
+  );
   return (
     <ThemeProvider attribute="class" defaultTheme="system" disableTransitionOnChange enableSystem>
       <PlgMotionProvider>
         <QueryClientProvider client={queryClient}>
-          <PostHogAnalyticsProvider>
-            <TooltipProvider>
-              <ToastProvider>
-                <PostHogPageView />
-                <PostHogWebVitals />
-                {children}
-              </ToastProvider>
-            </TooltipProvider>
-          </PostHogAnalyticsProvider>
+          {disableAnalytics ? (
+            content
+          ) : (
+            <PostHogAnalyticsProvider>{content}</PostHogAnalyticsProvider>
+          )}
           {process.env.NODE_ENV === 'development' &&
           process.env.NEXT_PUBLIC_QUERY_DEVTOOLS === 'true' ? (
             <ReactQueryDevtools initialIsOpen={false} />

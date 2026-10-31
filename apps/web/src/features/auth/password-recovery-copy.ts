@@ -1,6 +1,8 @@
+import { demoErrorCopy } from '@/i18n/demo-error-copy';
 import type { Locale } from '@/lib/locales';
 
 const ar = {
+  ...demoErrorCopy.ar,
   acceptedEmail: 'إذا كان البريد مسجلًا، ستصلك رسالة تحتوي على رابط تغيير كلمة المرور.',
   acceptedPhone: 'إذا كان الرقم مسجلًا، ستصلك رسالة واتساب تحتوي على رابط تغيير كلمة المرور.',
   acceptedTitle: 'راجع رسائلك',
@@ -44,6 +46,7 @@ export type PasswordRecoveryCopy = {
 };
 
 const en: PasswordRecoveryCopy = {
+  ...demoErrorCopy.en,
   acceptedEmail: 'If the email is registered, you will receive a password-reset link.',
   acceptedPhone: 'If the number is registered, you will receive a password-reset link on WhatsApp.',
   acceptedTitle: 'Check your messages',

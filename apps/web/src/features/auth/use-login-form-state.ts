@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { DEMO_EMAIL, DEMO_PASSWORD } from '@/api/demo/credentials';
 import {
   useAuthControllerLoginV1,
   usePhoneOtpControllerRequestV1,
@@ -23,8 +24,14 @@ export type LoginFormProps = {
   locale: Locale;
   organizationCode: string;
   onStepChange?: (step: LoginStep) => void;
+  demo?: boolean;
 };
-export function useLoginFormState({ locale, organizationCode, onStepChange }: LoginFormProps) {
+export function useLoginFormState({
+  locale,
+  organizationCode,
+  onStepChange,
+  demo = false,
+}: LoginFormProps) {
   const copy = getLoginCopy(locale);
   const router = useRouter();
   const schema = useMemo(() => createLoginSchema(copy), [copy]);
@@ -62,9 +69,9 @@ export function useLoginFormState({ locale, organizationCode, onStepChange }: Lo
   });
   const form = useForm<LoginFormValues>({
     defaultValues: {
-      identifier: '',
+      identifier: demo ? DEMO_EMAIL : '',
       identifierType: 'EMAIL',
-      password: '',
+      password: demo ? DEMO_PASSWORD : '',
     },
     resolver: zodResolver(schema),
   });
@@ -73,6 +80,7 @@ export function useLoginFormState({ locale, organizationCode, onStepChange }: Lo
   useLoginMfaMethodMotion(mfaRef, step, mfaMethod);
 
   useEffect(() => {
+    if (demo) return;
     const remembered = readRememberedLogin();
     if (!remembered) return;
     form.setValue('identifierType', remembered.identifierType);
@@ -83,7 +91,7 @@ export function useLoginFormState({ locale, organizationCode, onStepChange }: Lo
         : remembered.identifier,
     );
     setRememberMe(true);
-  }, [form]);
+  }, [form, demo]);
 
   useEffect(() => {
     if (cooldownSeconds <= 0) return;

@@ -108,10 +108,19 @@ export function RecoveryErrorMessage({
   );
 }
 
-export function recoveryError(error: unknown, fallback: string): RecoveryError {
-  if (!isPlgApiError(error)) return { message: fallback };
+export function recoveryError(
+  error: unknown,
+  copy: ReturnType<typeof getPasswordRecoveryCopy>,
+): RecoveryError {
+  if (!isPlgApiError(error)) return { message: copy.genericError };
+  const message =
+    error.payload.code === 'DEMO_STORAGE_LIMIT'
+      ? copy.demoStorageLimit
+      : error.payload.code === 'DEMO_ACTION_UNAVAILABLE'
+        ? copy.demoActionUnavailable
+        : copy.genericError;
   return {
-    message: fallback,
+    message,
     ...(error.payload.correlationId ? { correlationId: error.payload.correlationId } : {}),
   };
 }
@@ -127,8 +136,5 @@ export function passwordResetError(
   if (error.payload.code === 'PASSWORD_REUSE_FORBIDDEN') {
     return { message: copy.passwordReuseForbidden };
   }
-  return {
-    message: copy.genericError,
-    ...(error.payload.correlationId ? { correlationId: error.payload.correlationId } : {}),
-  };
+  return recoveryError(error, copy);
 }

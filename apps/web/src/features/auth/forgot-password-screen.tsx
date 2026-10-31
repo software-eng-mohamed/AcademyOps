@@ -59,7 +59,7 @@ export function ForgotPasswordScreen({
       });
       setAccepted(true);
     } catch (requestError) {
-      setError(recoveryError(requestError, copy.genericError));
+      setError(recoveryError(requestError, copy));
     }
   };
 

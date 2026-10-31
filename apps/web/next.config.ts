@@ -6,6 +6,7 @@ import { resolveApiOrigin } from './src/api/server/environment';
 loadEnvironmentFile({ path: path.resolve(process.cwd(), '../../.env') });
 
 const apiOrigin = resolveApiOrigin();
+const demoOnly = process.env.ACADEMYOPS_DEMO_ONLY === 'true';
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
@@ -31,7 +32,7 @@ const nextConfig: NextConfig = {
       'react-aria-components',
     ],
   },
-  output: process.env.VERCEL ? undefined : 'standalone',
+  ...(process.env.VERCEL ? {} : { output: 'standalone' as const }),
   outputFileTracingRoot: path.resolve(process.cwd(), '../..'),
   poweredByHeader: false,
   reactStrictMode: true,
@@ -41,14 +42,17 @@ const nextConfig: NextConfig = {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
   async redirects() {
-    return [{ source: '/', destination: '/ar/login', permanent: false }];
+    return [{ source: '/', destination: demoOnly ? '/en/login' : '/ar/login', permanent: false }];
   },
   async rewrites() {
-    return [
-      { source: '/socket.io', destination: `${apiOrigin}/socket.io` },
-      { source: '/socket.io/:path*', destination: `${apiOrigin}/socket.io/:path*` },
-      { source: '/api/v1/:path*', destination: `${apiOrigin}/api/v1/:path*` },
-    ];
+    if (demoOnly) return [];
+    return {
+      beforeFiles: [
+        { source: '/socket.io', destination: `${apiOrigin}/socket.io` },
+        { source: '/socket.io/:path*', destination: `${apiOrigin}/socket.io/:path*` },
+        { source: '/api/v1/:path*', destination: `${apiOrigin}/api/v1/:path*` },
+      ],
+    };
   },
 };
 

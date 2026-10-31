@@ -7,7 +7,9 @@ export function loginErrorView(error: unknown, copy: LoginCopy): LoginErrorView 
   if (!isPlgApiError(error)) return { message: copy.errorGeneric };
 
   let message = copy.errorGeneric;
-  if (error.payload.code === 'INVALID_CREDENTIALS') message = copy.errorInvalid;
+  if (error.payload.code === 'DEMO_STORAGE_LIMIT') message = copy.demoStorageLimit;
+  else if (error.payload.code === 'DEMO_ACTION_UNAVAILABLE') message = copy.demoActionUnavailable;
+  else if (error.payload.code === 'INVALID_CREDENTIALS') message = copy.errorInvalid;
   else if (error.payload.code === 'MFA_CODE_INVALID') message = copy.errorMfa;
   else if (error.payload.code === 'PHONE_OTP_INVALID') message = copy.errorPhoneOtpInvalid;
   else if (error.payload.code === 'PHONE_OTP_UNAVAILABLE') message = copy.errorPhoneOtpUnavailable;

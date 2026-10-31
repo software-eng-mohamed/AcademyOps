@@ -1,6 +1,8 @@
+import { demoErrorCopy } from '@/i18n/demo-error-copy';
 import type { Locale } from '@/lib/locales';
 
 const ar = {
+  ...demoErrorCopy.ar,
   back: 'الرجوع لبيانات الدخول',
   brand: 'AcademyOps',
   code: 'رمز التحقق',
@@ -64,6 +66,7 @@ export type LoginCopy = {
 };
 
 const en: LoginCopy = {
+  ...demoErrorCopy.en,
   back: 'Back to sign-in details',
   brand: 'AcademyOps',
   code: 'Verification code',

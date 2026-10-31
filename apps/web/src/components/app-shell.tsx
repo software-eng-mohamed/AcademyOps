@@ -19,6 +19,7 @@ import { useAuthControllerLogoutV1 } from '@/api/generated/identity/identity';
 import { DashboardInitialLoader } from '@/components/application/dashboard/dashboard-initial-loader';
 import { DashboardSidebar } from '@/components/application/dashboard/dashboard-sidebar';
 import { AcademyOpsMark } from '@/components/brand/academyops-mark';
+import { DemoNotice } from '@/components/demo-notice';
 import { LocaleDocumentAttributes } from '@/components/locale-document-attributes';
 import type { DashboardUser } from '@/features/dashboard/dashboard-user';
 import type { DashboardNavigationGroup } from '@/features/dashboard/navigation';
@@ -34,11 +35,13 @@ export function AppShell({
   initialSidebarPreferences,
   showInitialLoader,
   user,
+  demo = false,
 }: {
   children: ReactNode;
   initialSidebarPreferences: DashboardSidebarPreferences;
   showInitialLoader: boolean;
   user: DashboardUser;
+  demo?: boolean;
 }) {
   const pathname = usePathname();
   const locale = localeFromPath(pathname);
@@ -144,6 +147,7 @@ export function AppShell({
       </Drawer>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {demo && <DemoNotice locale={locale} />}
         <header className="flex h-14 shrink-0 items-center border-b border-border-button-default px-4 lg:hidden">
           <IconButton label={copy.openNavigation} onClick={() => setMobileOpen(true)} tone="ghost">
             <HambergerMenu

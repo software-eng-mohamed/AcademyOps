@@ -74,3 +74,9 @@ jobs:
         run: pnpm --filter @academyops/api exec vitest run test/browser/browser-api.integration.test.ts --maxWorkers=1
       - name: Exercise localized UI and navigation against controlled API fixtures
         run: pnpm web:e2e --workers=1
+      - name: Exercise the original UI against the internal demo API
+        env:
+          ACADEMYOPS_DEMO_ONLY: 'true'
+          NEXT_PUBLIC_POSTHOG_ENABLED: 'false'
+          NEXT_PUBLIC_QUERY_DEVTOOLS: 'false'
+        run: pnpm web:e2e current-demo.spec.ts --workers=1

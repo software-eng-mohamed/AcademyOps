@@ -4,6 +4,7 @@ node_modules/
 dist/
 coverage/
 .turbo/
+.vercel/
 .codex-run/
 .codex-runtime/
 .otp-connector-session/

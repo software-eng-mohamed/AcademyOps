@@ -15,9 +15,11 @@ import { useLoginStepMotion } from './use-login-mfa-motion';
 export function LoginScreen({
   locale,
   organizationCode,
+  demo = false,
 }: {
   locale: Locale;
   organizationCode: string;
+  demo?: boolean;
 }) {
   const copy = getLoginCopy(locale);
   const appCopy = getAppCopy(locale);
@@ -66,7 +68,11 @@ export function LoginScreen({
                   ? copy.phoneOtpDescription
                   : step === 'changePhone'
                     ? copy.changePhoneDescription
-                    : null
+                    : demo
+                      ? locale === 'ar'
+                        ? 'نسخة تجريبية ببيانات وهمية. بيانات الدخول التجريبية جاهزة؛ اضغط تسجيل الدخول للاستكشاف.'
+                        : 'Fictional demo data. Sample credentials are filled in; sign in to explore.'
+                      : null
             }
             logo={<AcademyOpsBrand label={copy.brand} />}
             title={
@@ -79,7 +85,12 @@ export function LoginScreen({
                     : copy.title
             }
           >
-            <LoginForm locale={locale} organizationCode={organizationCode} onStepChange={setStep} />
+            <LoginForm
+              demo={demo}
+              locale={locale}
+              organizationCode={organizationCode}
+              onStepChange={setStep}
+            />
           </AuthCard>
         </div>
       </main>

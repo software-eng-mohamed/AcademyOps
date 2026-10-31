@@ -29,6 +29,7 @@ export default async function DashboardLayout({
   const showInitialLoader = !cookieStore.has(DASHBOARD_INITIAL_LOADER_COOKIE);
   return (
     <AppShell
+      demo={process.env.ACADEMYOPS_DEMO_ONLY === 'true'}
       initialSidebarPreferences={initialSidebarPreferences}
       showInitialLoader={showInitialLoader}
       user={user}

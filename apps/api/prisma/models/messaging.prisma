@@ -1,0 +1,39 @@
+model WhatsappOtpChannel {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String    @unique @map("organization_id") @db.Uuid
+  provider              String    @default("BAILEYS") @db.VarChar(30)
+  enabled               Boolean   @default(false)
+  desiredState          String    @default("DISCONNECTED") @map("desired_state") @db.VarChar(30)
+  state                 String    @default("DISABLED") @db.VarChar(30)
+  phoneMasked           String?   @map("phone_masked") @db.VarChar(30)
+  lastErrorCode         String?   @map("last_error_code") @db.VarChar(80)
+  lastConnectedAt       DateTime? @map("last_connected_at") @db.Timestamptz(6)
+  lastDisconnectedAt    DateTime? @map("last_disconnected_at") @db.Timestamptz(6)
+  lastHeartbeatAt       DateTime? @map("last_heartbeat_at") @db.Timestamptz(6)
+  qrExpiresAt           DateTime? @map("qr_expires_at") @db.Timestamptz(6)
+  commandVersion        Int       @default(0) @map("command_version")
+  handledCommandVersion Int       @default(0) @map("handled_command_version")
+  version               Int       @default(1)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([enabled, desiredState, updatedAt])
+  @@map("whatsapp_otp_channels")
+}
+
+model WhatsappAuthRecord {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  category       String   @db.VarChar(80)
+  keyId          String   @map("key_id") @db.VarChar(190)
+  valueCipher    String   @map("value_cipher")
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, category, keyId])
+  @@index([organizationId, category])
+  @@map("whatsapp_auth_records")
+}

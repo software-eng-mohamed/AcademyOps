@@ -1,0 +1,205 @@
+model User {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String    @map("organization_id") @db.Uuid
+  personId              String    @map("person_id") @db.Uuid
+  status                String    @default("PENDING") @db.VarChar(30)
+  passwordHash          String?   @map("password_hash")
+  preferredLocale       String?   @map("preferred_locale") @db.VarChar(5)
+  onboardingCompletedAt DateTime? @map("onboarding_completed_at") @db.Timestamptz(6)
+  mustChangePassword    Boolean   @default(false) @map("must_change_password")
+  passwordChangedAt     DateTime? @map("password_changed_at") @db.Timestamptz(6)
+  version               Int       @default(1)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, personId])
+  @@map("users")
+}
+
+model UserRecentEntity {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  entityType     String   @map("entity_type") @db.VarChar(40)
+  entityId       String   @map("entity_id") @db.Uuid
+  lastViewedAt   DateTime @default(now()) @map("last_viewed_at") @db.Timestamptz(6)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, userId, entityType, entityId])
+  @@index([organizationId, userId, lastViewedAt(sort: Desc)])
+  @@map("user_recent_entities")
+}
+
+model UserNotification {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  eventKey       String    @map("event_key") @db.VarChar(160)
+  type           String    @db.VarChar(60)
+  subjectType    String?   @map("subject_type") @db.VarChar(40)
+  subjectId      String?   @map("subject_id") @db.Uuid
+  payload        Json      @db.JsonB
+  readAt         DateTime? @map("read_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, userId, eventKey])
+  @@index([organizationId, userId, readAt, createdAt(sort: Desc)])
+  @@map("user_notifications")
+}
+
+model UserLoginIdentifier {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String    @map("organization_id") @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  type            String    @db.VarChar(30)
+  normalizedValue String    @map("normalized_value")
+  verifiedAt      DateTime? @map("verified_at") @db.Timestamptz(6)
+  revokedAt       DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, userId, id])
+  @@index([organizationId, userId])
+  @@map("user_login_identifiers")
+}
+
+model UserSession {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId     String    @map("organization_id") @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  tokenHash          String    @map("token_hash") @db.VarChar(128)
+  csrfSecretHash     String    @map("csrf_secret_hash") @db.VarChar(128)
+  ipHash             String?   @map("ip_hash") @db.VarChar(128)
+  userAgentHash      String?   @map("user_agent_hash") @db.VarChar(128)
+  mfaVerifiedAt      DateTime? @map("mfa_verified_at") @db.Timestamptz(6)
+  lastSeenAt         DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+  idleTimeoutSeconds Int       @default(1800) @map("idle_timeout_seconds")
+  expiresAt          DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt          DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([tokenHash])
+  @@index([organizationId, userId, revokedAt, expiresAt])
+  @@map("user_sessions")
+}
+
+model PasswordResetToken {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  tokenHash      String    @unique @map("token_hash") @db.VarChar(128)
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz(6)
+  usedAt         DateTime? @map("used_at") @db.Timestamptz(6)
+  revokedAt      DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, userId, usedAt, revokedAt, expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model MfaFactor {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String    @map("organization_id") @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  type            String    @db.VarChar(30)
+  label           String?
+  secretCipher    String?   @map("secret_cipher")
+  credentialData  Json?     @map("credential_data") @db.JsonB
+  lastUsedCounter BigInt?   @map("last_used_counter")
+  verifiedAt      DateTime? @map("verified_at") @db.Timestamptz(6)
+  revokedAt       DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, userId, revokedAt])
+  @@map("mfa_factors")
+}
+
+model MfaRecoveryCode {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  codeHash       String    @map("code_hash") @db.VarChar(128)
+  usedAt         DateTime? @map("used_at") @db.Timestamptz(6)
+  revokedAt      DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([codeHash])
+  @@index([organizationId, userId, usedAt, revokedAt])
+  @@map("mfa_recovery_codes")
+}
+
+model Permission {
+  code        String   @id @db.VarChar(100)
+  description String
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("permissions")
+}
+
+model Role {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  code           String   @db.VarChar(50)
+  name           String
+  isSystem       Boolean  @default(false) @map("is_system")
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, code])
+  @@map("roles")
+}
+
+model RolePermissionGrant {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  roleId         String   @map("role_id") @db.Uuid
+  permissionCode String   @map("permission_code") @db.VarChar(100)
+  scope          String   @db.Char(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, roleId, permissionCode, scope])
+  @@map("role_permission_grants")
+}
+
+model UserRoleAssignment {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  roleId         String    @map("role_id") @db.Uuid
+  startsAt       DateTime  @default(now()) @map("starts_at") @db.Timestamptz(6)
+  endsAt         DateTime? @map("ends_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, userId, endsAt])
+  @@map("user_role_assignments")
+}
+
+model PhoneOtpChallenge {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String    @map("organization_id") @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  phoneIdentifierId String    @map("phone_identifier_id") @db.Uuid
+  normalizedPhone   String    @map("normalized_phone") @db.VarChar(50)
+  codeHash          String    @map("code_hash") @db.VarChar(128)
+  expiresAt         DateTime  @map("expires_at") @db.Timestamptz(6)
+  attempts          Int       @default(0)
+  consumedAt        DateTime? @map("consumed_at") @db.Timestamptz(6)
+  revokedAt         DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, userId, consumedAt, revokedAt, expiresAt])
+  @@index([organizationId, normalizedPhone, consumedAt, revokedAt, expiresAt])
+  @@map("phone_otp_challenges")
+}

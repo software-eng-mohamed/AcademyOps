@@ -1,0 +1,102 @@
+model AttendancePolicyVersion {
+  id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId            String    @map("organization_id") @db.Uuid
+  programVersionId          String    @map("program_version_id") @db.Uuid
+  cohortId                  String?   @map("cohort_id") @db.Uuid
+  version                   Int
+  minimumRatio              Decimal   @default(0.80) @map("minimum_ratio") @db.Decimal(5, 4)
+  lockAfterMinutes          Int       @default(1440) @map("lock_after_minutes")
+  checkInOpensBeforeMinutes Int       @default(30) @map("check_in_opens_before_minutes")
+  checkInClosesAfterMinutes Int       @default(30) @map("check_in_closes_after_minutes")
+  effectiveFrom             DateTime  @map("effective_from") @db.Timestamptz(6)
+  effectiveTo               DateTime? @map("effective_to") @db.Timestamptz(6)
+  createdBy                 String    @map("created_by") @db.Uuid
+  createdAt                 DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, programVersionId, cohortId, version])
+  @@map("attendance_policy_versions")
+}
+
+model QrChallenge {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  sessionId      String   @map("session_id") @db.Uuid
+  nonceDigest    String   @map("nonce_digest") @db.VarChar(128)
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz(6)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdBy      String   @map("created_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([nonceDigest])
+  @@index([organizationId, sessionId, expiresAt])
+  @@map("qr_challenges")
+}
+
+model AttendanceRecord {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  sessionId      String   @map("session_id") @db.Uuid
+  enrollmentId   String   @map("enrollment_id") @db.Uuid
+  currentStatus  String   @default("UNMARKED") @map("current_status") @db.VarChar(30)
+  source         String   @db.VarChar(30)
+  recordedAt     DateTime @map("recorded_at") @db.Timestamptz(6)
+  recordedBy     String?  @map("recorded_by") @db.Uuid
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, sessionId, enrollmentId])
+  @@index([organizationId, sessionId, currentStatus])
+  @@index([organizationId, enrollmentId, sessionId])
+  @@map("attendance_records")
+}
+
+model AttendanceEvent {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId     String   @map("organization_id") @db.Uuid
+  attendanceRecordId String   @map("attendance_record_id") @db.Uuid
+  version            Int
+  fromStatus         String?  @map("from_status") @db.VarChar(30)
+  toStatus           String   @map("to_status") @db.VarChar(30)
+  reason             String?
+  actorUserId        String?  @map("actor_user_id") @db.Uuid
+  occurredAt         DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, attendanceRecordId, version])
+  @@map("attendance_events")
+}
+
+model MakeupCredit {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  missedRecordId String   @map("missed_record_id") @db.Uuid
+  makeupRecordId String   @map("makeup_record_id") @db.Uuid
+  approvedBy     String   @map("approved_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, missedRecordId])
+  @@unique([organizationId, makeupRecordId])
+  @@map("makeup_credits")
+}
+
+model AttendanceAnomaly {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  sessionId       String?  @map("session_id") @db.Uuid
+  challengeId     String?  @map("challenge_id") @db.Uuid
+  actorUserId     String?  @map("actor_user_id") @db.Uuid
+  studentPersonId String?  @map("student_person_id") @db.Uuid
+  reasonCode      String   @map("reason_code") @db.VarChar(60)
+  metadata        Json?    @db.JsonB
+  occurredAt      DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, sessionId, occurredAt(sort: Desc)])
+  @@index([organizationId, actorUserId, occurredAt(sort: Desc)])
+  @@map("attendance_anomalies")
+}

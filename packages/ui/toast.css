@@ -1,0 +1,176 @@
+@import '@heroui/styles/base/base.css' layer(base);
+@import '@heroui/styles/themes/shared/theme.css' layer(theme);
+@import '@heroui/styles/themes/default/variables.css' layer(theme);
+@import '@heroui/styles/components/button.css' layer(components);
+@import '@heroui/styles/components/link.css' layer(components);
+@import '@heroui/styles/components/breadcrumbs.css' layer(components);
+@import '@heroui/styles/components/close-button.css' layer(components);
+@import '@heroui/styles/components/spinner.css' layer(components);
+@import '@heroui/styles/components/toast.css' layer(components);
+@import '@heroui/styles/utilities';
+@import '@heroui/styles/variants';
+
+/*
+ * HeroUI ships its own neutral palette for toasts. Keep the behavior and
+ * accessibility primitives, but map the visual treatment to PLG's semantic
+ * tokens so stacked cards, text and controls stay correct in both themes.
+ */
+.plg-toast-region {
+  --plg-toast-surface: var(
+    --color-notification-center-background,
+    var(--plg-color-surface, #ffffff)
+  );
+  --plg-toast-surface-muted: var(
+    --color-background-secondary-default,
+    var(--plg-color-surface-subtle, #f7f8fa)
+  );
+  --plg-toast-border: var(--color-border-button-default, var(--plg-color-border, #e8edf3));
+  --plg-toast-border-strong: var(
+    --color-border-button-hover,
+    var(--plg-color-border-strong, #d7dde5)
+  );
+  --plg-toast-ink: var(--color-text-primary, var(--plg-color-ink, #101828));
+  --plg-toast-muted: var(--color-text-secondary, var(--plg-color-ink-muted, #667085));
+  --plg-toast-tone: var(
+    --color-notification-information-foreground,
+    var(--plg-color-info, #2563eb)
+  );
+  --plg-toast-tone-soft: var(
+    --color-notification-information-background,
+    var(--plg-color-info-soft, #eff6ff)
+  );
+}
+
+.plg-toast-region .toast {
+  min-height: 76px;
+  isolation: isolate;
+  overflow: hidden;
+  gap: 12px;
+  padding: 14px 48px 14px 16px;
+  border: 1px solid var(--plg-toast-border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--plg-toast-surface) 96%, transparent);
+  color: var(--plg-toast-ink);
+  box-shadow: var(--plg-shadow-popover, 0 14px 38px rgb(15 23 42 / 0.16));
+  backdrop-filter: blur(18px) saturate(135%);
+}
+
+[dir='rtl'] .plg-toast-region .toast {
+  padding-right: 16px;
+  padding-left: 48px;
+}
+
+.plg-toast-region .toast::before {
+  position: absolute;
+  inset-block: 13px;
+  inset-inline-start: 0;
+  width: 3px;
+  border-radius: 0 999px 999px 0;
+  background: var(--plg-toast-tone);
+  content: '';
+}
+
+[dir='rtl'] .plg-toast-region .toast::before {
+  border-radius: 999px 0 0 999px;
+}
+
+.plg-toast-region .toast__content {
+  min-width: 0;
+  gap: 2px;
+  align-items: flex-start;
+}
+
+.plg-toast-region .toast__title {
+  color: var(--plg-toast-ink);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 650;
+}
+
+.plg-toast-region .toast__description {
+  color: var(--plg-toast-muted);
+  font-size: 13px;
+  line-height: 19px;
+}
+
+.plg-toast-region .toast__indicator {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--plg-toast-tone) 18%, transparent);
+  border-radius: 13px;
+  background: var(--plg-toast-tone-soft);
+  color: var(--plg-toast-tone);
+}
+
+.plg-toast-region .toast__indicator [data-slot='toast-default-icon'] {
+  width: 18px;
+  height: 18px;
+}
+
+.plg-toast-region .toast--success {
+  --plg-toast-tone: var(--color-notification-success-foreground, var(--plg-color-success, #15803d));
+  --plg-toast-tone-soft: var(
+    --color-notification-success-background,
+    var(--plg-color-success-soft, #ecfdf3)
+  );
+}
+
+.plg-toast-region .toast--warning {
+  --plg-toast-tone: var(--plg-color-warning, #9a4b08);
+  --plg-toast-tone-soft: var(--plg-color-warning-soft, #fffaeb);
+}
+
+.plg-toast-region .toast--danger {
+  --plg-toast-tone: var(--color-notification-error-foreground, var(--plg-color-danger, #b42318));
+  --plg-toast-tone-soft: var(
+    --color-notification-error-background,
+    var(--plg-color-danger-soft, #fef3f2)
+  );
+}
+
+.plg-toast-region .toast[data-frontmost='true'] .toast__close-button {
+  top: 12px;
+  inset-inline-end: 12px;
+  width: 28px;
+  height: 28px;
+  padding: 6px;
+  pointer-events: auto;
+  border: 1px solid var(--plg-toast-border);
+  border-radius: 10px;
+  background: var(--plg-toast-surface-muted);
+  color: var(--plg-toast-muted);
+  opacity: 1;
+  box-shadow: none;
+}
+
+.plg-toast-region .toast[data-frontmost='true'] .toast__close-button:hover,
+.plg-toast-region .toast[data-frontmost='true'] .toast__close-button[data-hovered='true'] {
+  border-color: var(--plg-toast-border-strong);
+  background: var(--plg-toast-surface-muted);
+  color: var(--plg-toast-ink);
+}
+
+.plg-toast-region .toast[data-frontmost='true'] .toast__close-button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--plg-color-focus, #2f6fdb) 24%, transparent);
+  outline-offset: 2px;
+}
+
+.plg-toast-region .toast__close-button [data-slot='close-button-icon'] {
+  width: 14px;
+  height: 14px;
+  color: currentColor;
+}
+
+@media (max-width: 640px) {
+  .plg-toast-region .toast {
+    min-height: 70px;
+    padding-block: 12px;
+  }
+
+  .plg-toast-region .toast__indicator {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+}

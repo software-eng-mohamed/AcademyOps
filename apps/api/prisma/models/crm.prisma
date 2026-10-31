@@ -1,0 +1,131 @@
+model BusinessAccount {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  owningBranchId String   @map("owning_branch_id") @db.Uuid
+  legalName      String   @map("legal_name")
+  displayName    String   @map("display_name")
+  registrationNo String?  @map("registration_no")
+  taxId          String?  @map("tax_id")
+  status         String   @default("ACTIVE") @db.VarChar(30)
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, owningBranchId, status])
+  @@index([organizationId, displayName])
+  @@map("business_accounts")
+}
+
+model BusinessAccountContact {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String   @map("organization_id") @db.Uuid
+  businessAccountId String   @map("business_account_id") @db.Uuid
+  personId          String   @map("person_id") @db.Uuid
+  role              String?  @db.VarChar(80)
+  isPrimary         Boolean  @default(false) @map("is_primary")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, businessAccountId, personId])
+  @@map("business_account_contacts")
+}
+
+model BillingAccount {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String   @map("organization_id") @db.Uuid
+  kind              String   @db.VarChar(20)
+  personId          String?  @map("person_id") @db.Uuid
+  businessAccountId String?  @map("business_account_id") @db.Uuid
+  currencyCode      String   @default("EGP") @map("currency_code") @db.Char(3)
+  version           Int      @default(1)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, personId])
+  @@index([organizationId, businessAccountId])
+  @@map("billing_accounts")
+}
+
+model LeadStage {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  code           String   @db.VarChar(50)
+  name           String
+  ordinal        Int
+  isActive       Boolean  @default(true) @map("is_active")
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, code])
+  @@unique([organizationId, ordinal])
+  @@map("lead_stages")
+}
+
+model Lead {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  branchId       String    @map("branch_id") @db.Uuid
+  assignedUserId String?   @map("assigned_user_id") @db.Uuid
+  personId       String?   @map("person_id") @db.Uuid
+  stageId        String?   @map("stage_id") @db.Uuid
+  state          String    @default("NEW") @db.VarChar(30)
+  source         String?   @db.VarChar(80)
+  nextActionAt   DateTime? @map("next_action_at") @db.Timestamptz(6)
+  lostReason     String?   @map("lost_reason")
+  version        Int       @default(1)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, branchId, state, createdAt(sort: Desc)])
+  @@index([organizationId, assignedUserId, state, nextActionAt])
+  @@map("leads")
+}
+
+model LeadActivity {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  leadId         String   @map("lead_id") @db.Uuid
+  actorUserId    String   @map("actor_user_id") @db.Uuid
+  type           String   @db.VarChar(50)
+  occurredAt     DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  data           Json?    @db.JsonB
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, leadId, occurredAt(sort: Desc)])
+  @@map("lead_activities")
+}
+
+model LeadStatusHistory {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  leadId         String   @map("lead_id") @db.Uuid
+  fromState      String?  @map("from_state") @db.VarChar(30)
+  toState        String   @map("to_state") @db.VarChar(30)
+  reason         String?
+  actorUserId    String   @map("actor_user_id") @db.Uuid
+  occurredAt     DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, leadId, occurredAt])
+  @@map("lead_status_history")
+}
+
+model LeadConversion {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  leadId         String   @map("lead_id") @db.Uuid
+  personId       String   @map("person_id") @db.Uuid
+  enrollmentId   String   @map("enrollment_id") @db.Uuid
+  convertedBy    String   @map("converted_by") @db.Uuid
+  convertedAt    DateTime @default(now()) @map("converted_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, leadId])
+  @@map("lead_conversions")
+}

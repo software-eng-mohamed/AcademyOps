@@ -1,0 +1,42 @@
+name: academyops
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: plg_academy
+      POSTGRES_USER: plg
+      POSTGRES_PASSWORD: plg_dev_only
+    ports:
+      - '127.0.0.1:55432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U plg -d plg_academy']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - plg-postgres:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      # Keep the host port below Windows' default dynamic range (49152+).
+      - '127.0.0.1:16379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - plg-redis:/data
+
+  mailpit:
+    image: axllent/mailpit:v1.30.0@sha256:0059ef81e492a7192af3816281eed6859eb078bd7bdc58b76757c13e10e53a7d
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:51025:1025'
+      - '127.0.0.1:58025:8025'
+
+volumes:
+  plg-postgres:
+  plg-redis:

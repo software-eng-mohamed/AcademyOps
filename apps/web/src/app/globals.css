@@ -1,0 +1,332 @@
+@layer theme, base, components, utilities;
+
+@import "tailwindcss";
+@import "@academyops/ui/toast.css";
+@import "@academyops/ui/academy.css";
+@import "../components/base/table/table.css";
+@import "@academyops/design-tokens/theme.css";
+@import "../styles/theme.css";
+@import "../styles/typography.css";
+@source "../../../../packages/ui/src/**/*.{ts,tsx}";
+
+@font-face {
+  font-family: "PLG Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/inter-variable.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "PLG Cairo";
+  font-style: normal;
+  font-weight: 200 1000;
+  font-display: swap;
+  src: url("/fonts/cairo-variable.ttf") format("truetype");
+}
+
+@theme inline {
+  --color-canvas: var(--plg-color-canvas);
+  --color-workspace: var(--plg-color-workspace);
+  --color-surface: var(--plg-color-surface);
+  --color-surface-subtle: var(--plg-color-surface-subtle);
+  --color-sidebar: var(--plg-color-sidebar);
+  --color-utility: var(--plg-color-utility);
+  --color-ink: var(--plg-color-ink);
+  --color-ink-muted: var(--plg-color-ink-muted);
+  --color-border: var(--plg-color-border);
+  --color-border-strong: var(--plg-color-border-strong);
+  --color-brand: var(--plg-color-brand);
+  --color-brand-strong: var(--plg-color-brand-strong);
+  --color-brand-bright: var(--plg-color-brand-bright);
+  --color-brand-soft: var(--plg-color-brand-soft);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-success: var(--plg-color-success);
+  --color-success-soft: var(--plg-color-success-soft);
+  --color-warning: var(--plg-color-warning);
+  --color-warning-soft: var(--plg-color-warning-soft);
+  --color-danger: var(--plg-color-danger);
+  --color-danger-soft: var(--plg-color-danger-soft);
+  --color-info: var(--plg-color-info);
+  --color-info-soft: var(--plg-color-info-soft);
+  --color-focus: var(--plg-color-focus);
+  --font-sans: "PLG Inter", "PLG Cairo", "Segoe UI", sans-serif;
+  --radius-sm: var(--plg-radius-sm);
+  --radius-md: var(--plg-radius-md);
+  --radius-lg: var(--plg-radius-lg);
+  --shadow-card: var(--plg-shadow-card);
+  --shadow-control: var(--plg-shadow-control);
+  --shadow-raised: var(--plg-shadow-raised);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: var(--plg-color-border);
+  }
+  html {
+    min-width: 320px;
+    background: var(--plg-color-canvas);
+    color: var(--plg-color-ink);
+    font-family: "PLG Inter", "PLG Cairo", "Segoe UI", sans-serif;
+    font-synthesis: none;
+    text-rendering: geometricPrecision;
+  }
+  html[dir="rtl"] {
+    font-family: "PLG Cairo", "PLG Inter", "Segoe UI", sans-serif;
+  }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--plg-color-workspace);
+  }
+  button,
+  input,
+  textarea {
+    font: inherit;
+  }
+  a[href],
+  button:not(:disabled):not([aria-disabled="true"]),
+  select:not(:disabled),
+  summary,
+  label[for],
+  input:is(
+    [type="button"],
+    [type="checkbox"],
+    [type="color"],
+    [type="file"],
+    [type="image"],
+    [type="radio"],
+    [type="range"],
+    [type="reset"],
+    [type="submit"]
+  ):not(:disabled),
+  [role="button"]:not([aria-disabled="true"]):not([data-disabled]),
+  [role="checkbox"]:not([aria-disabled="true"]):not([data-disabled]),
+  [role="link"]:not([aria-disabled="true"]):not([data-disabled]),
+  [role="menuitem"]:not([aria-disabled="true"]):not([data-disabled]),
+  [role="option"]:not([aria-disabled="true"]):not([data-disabled]),
+  [role="radio"]:not([aria-disabled="true"]):not([data-disabled]),
+  [role="switch"]:not([aria-disabled="true"]):not([data-disabled]),
+  [role="tab"]:not([aria-disabled="true"]):not([data-disabled]) {
+    cursor: pointer;
+  }
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  [aria-disabled="true"],
+  [data-disabled] {
+    cursor: not-allowed;
+  }
+  :focus-visible {
+    outline: 2px solid var(--plg-color-focus);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--plg-color-brand) 18%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+html[data-plg-theme-transition="active"] {
+  view-transition-name: root;
+}
+
+html[data-plg-theme-transition="active"]::view-transition-old(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+@keyframes plg-theme-transition-reveal {
+  from {
+    clip-path: var(--plg-theme-transition-clip-from);
+  }
+
+  to {
+    clip-path: var(--plg-theme-transition-clip-to);
+  }
+}
+
+html[data-plg-theme-transition="active"]::view-transition-new(root) {
+  animation: plg-theme-transition-reveal var(--plg-theme-transition-duration, 400ms)
+    var(--plg-theme-transition-easing, ease-in-out) both;
+  mix-blend-mode: normal;
+}
+
+/* Dashboard-only canvas colors. Keep auth and public pages on their own theme tokens. */
+[data-dashboard-shell] {
+  --dashboard-background: #ebebeb;
+  --dashboard-canvas: #f7f7f8;
+  background-color: var(--dashboard-background);
+}
+
+.dark [data-dashboard-shell] {
+  --dashboard-background: #171717;
+  --dashboard-canvas: #171717;
+}
+
+[data-dashboard-shell] [data-overview-role] {
+  background-color: var(--dashboard-background);
+}
+
+[data-dashboard-shell] [data-dashboard-canvas] {
+  background-color: var(--dashboard-canvas);
+}
+
+.owner-glass-card {
+  --owner-card-grid: #d4d4d4;
+  --owner-card-muted: #525252;
+  --owner-card-point: #ffffff;
+  --owner-card-subtle: #737373;
+  --owner-card-text: #171717;
+  --owner-card-tooltip-bg: #ffffff;
+  -webkit-backdrop-filter: blur(40px) saturate(150%);
+  backdrop-filter: blur(40px) saturate(150%);
+  background-color: rgb(255 255 255 / 76%);
+  border-color: rgb(23 23 23 / 10%);
+  box-shadow:
+    0 22px 60px rgb(51 65 85 / 14%),
+    inset 0 1px 0 rgb(255 255 255 / 95%),
+    inset 0 -1px 0 rgb(23 23 23 / 6%);
+}
+
+.owner-glass-card::before {
+  background-color: rgb(255 255 255 / 90%);
+  content: "";
+  height: 1px;
+  inset: 0 18px auto;
+  pointer-events: none;
+  position: absolute;
+}
+
+.owner-glass-chip {
+  background-color: rgb(23 23 23 / 5%);
+  border-color: rgb(23 23 23 / 9%);
+}
+
+.dark .owner-glass-card {
+  --owner-card-grid: #737373;
+  --owner-card-muted: #a3a3a3;
+  --owner-card-point: #262626;
+  --owner-card-subtle: #8f8f8f;
+  --owner-card-text: #f5f5f5;
+  --owner-card-tooltip-bg: #262626;
+  background-color: rgb(38 38 38 / 88%);
+  border-color: rgb(255 255 255 / 18%);
+  box-shadow:
+    0 22px 60px rgb(0 0 0 / 38%),
+    inset 0 1px 0 rgb(255 255 255 / 18%),
+    inset 0 -1px 0 rgb(0 0 0 / 42%);
+}
+
+.dark .owner-glass-card::before {
+  background-color: rgb(255 255 255 / 20%);
+}
+
+.dark .owner-glass-chip {
+  background-color: rgb(255 255 255 / 6%);
+  border-color: rgb(255 255 255 / 10%);
+}
+
+/* Staff Overview layouts and card alignment */
+.staff-overview-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.staff-overview-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.staff-overview-legend i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex: none;
+}
+
+@media (min-width: 1024px) {
+  .staff-academic-grid,
+  .staff-attendance-grid,
+  .staff-accounts-grid,
+  .staff-trainer-grid,
+  .staff-operations-grid,
+  .staff-reception-grid {
+    align-items: stretch;
+  }
+  .staff-academic-grid > .staff-overview-card,
+  .staff-trainer-grid > .staff-overview-card,
+  .staff-attendance-grid > .staff-overview-card,
+  .staff-accounts-grid > .staff-overview-card {
+    display: flex;
+    flex-direction: column;
+  }
+  .staff-academic-grid > .staff-overview-card > .staff-overview-body,
+  .staff-trainer-grid > .staff-overview-card > .staff-overview-body,
+  .staff-attendance-grid > .staff-overview-card > .staff-overview-body,
+  .staff-accounts-grid > .staff-overview-card > .staff-overview-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+  .staff-academic-grid > .staff-overview-card > .staff-overview-body > .staff-overview-empty,
+  .staff-trainer-grid > .staff-overview-card > .staff-overview-body > .staff-overview-empty,
+  .staff-attendance-grid > .staff-overview-card > .staff-overview-body > .staff-overview-empty,
+  .staff-accounts-grid > .staff-overview-card > .staff-overview-body > .staff-overview-empty {
+    flex: 1;
+  }
+  .staff-operations-grid > .staff-overview-stack,
+  .staff-reception-grid > .staff-overview-stack {
+    grid-template-rows: auto 1fr;
+  }
+  .staff-operations-grid > .staff-overview-stack > .staff-overview-card:last-child,
+  .staff-reception-grid > .staff-overview-stack > .staff-overview-card:last-child {
+    display: flex;
+    flex-direction: column;
+  }
+  .staff-operations-grid
+    > .staff-overview-stack
+    > .staff-overview-card:last-child
+    > .staff-overview-body,
+  .staff-reception-grid
+    > .staff-overview-stack
+    > .staff-overview-card:last-child
+    > .staff-overview-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+  .staff-operations-grid
+    > .staff-overview-stack
+    > .staff-overview-card:last-child
+    > .staff-overview-body
+    > .staff-overview-empty,
+  .staff-reception-grid
+    > .staff-overview-stack
+    > .staff-overview-card:last-child
+    > .staff-overview-body
+    > .staff-overview-empty {
+    flex: 1;
+  }
+}
+
+.plg-popover-content,
+[data-radix-popper-content-wrapper],
+.react-aria-Popover,
+[data-rac="Popover"] {
+  pointer-events: auto !important;
+}

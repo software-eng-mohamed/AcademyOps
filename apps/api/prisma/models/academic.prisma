@@ -1,0 +1,139 @@
+model Program {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  code           String   @db.VarChar(50)
+  name           String
+  status         String   @default("ACTIVE") @db.VarChar(30)
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, code])
+  @@map("programs")
+}
+
+model ProgramVersion {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  programId      String    @map("program_id") @db.Uuid
+  version        Int
+  status         String    @default("DRAFT") @db.VarChar(30)
+  effectiveFrom  DateTime? @map("effective_from") @db.Date
+  effectiveTo    DateTime? @map("effective_to") @db.Date
+  recordVersion  Int       @default(1) @map("record_version")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, programId, version])
+  @@map("program_versions")
+}
+
+model AcademicModule {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  code           String   @db.VarChar(50)
+  name           String
+  isActive       Boolean  @default(true) @map("is_active")
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, code])
+  @@map("modules")
+}
+
+model ProgramVersionModule {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId   String   @map("organization_id") @db.Uuid
+  programVersionId String   @map("program_version_id") @db.Uuid
+  moduleId         String   @map("module_id") @db.Uuid
+  ordinal          Int
+  required         Boolean  @default(true)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, programVersionId, ordinal], map: "program_version_modules_ordinal_key")
+  @@unique([organizationId, programVersionId, moduleId], map: "program_version_modules_module_key")
+  @@map("program_version_modules")
+}
+
+model Cohort {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId   String    @map("organization_id") @db.Uuid
+  programVersionId String    @map("program_version_id") @db.Uuid
+  owningBranchId   String    @map("owning_branch_id") @db.Uuid
+  code             String    @db.VarChar(80)
+  name             String?
+  status           String    @default("DRAFT") @db.VarChar(30)
+  startsOn         DateTime? @map("starts_on") @db.Date
+  endsOn           DateTime? @map("ends_on") @db.Date
+  capacity         Int?
+  version          Int       @default(1)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, code])
+  @@index([organizationId, owningBranchId, status])
+  @@map("cohorts")
+}
+
+model CohortModule {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId         String   @map("organization_id") @db.Uuid
+  cohortId               String   @map("cohort_id") @db.Uuid
+  programVersionModuleId String   @map("program_version_module_id") @db.Uuid
+  ordinal                Int
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, cohortId, ordinal])
+  @@unique([organizationId, cohortId, programVersionModuleId])
+  @@map("cohort_modules")
+}
+
+model Session {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String    @map("organization_id") @db.Uuid
+  cohortModuleId        String    @map("cohort_module_id") @db.Uuid
+  cohortId              String    @map("cohort_id") @db.Uuid
+  roomId                String?   @map("room_id") @db.Uuid
+  ordinal               Int
+  startsAt              DateTime? @map("starts_at") @db.Timestamptz(6)
+  endsAt                DateTime? @map("ends_at") @db.Timestamptz(6)
+  deliveryMode          String    @map("delivery_mode") @db.VarChar(30)
+  status                String    @default("DRAFT") @db.VarChar(30)
+  attendanceWindowState String    @default("SCHEDULED") @map("attendance_window_state") @db.VarChar(30)
+  attendanceLockedAt    DateTime? @map("attendance_locked_at") @db.Timestamptz(6)
+  version               Int       @default(1)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, cohortId, ordinal])
+  @@index([organizationId, cohortId, startsAt])
+  @@index([organizationId, roomId, startsAt])
+  @@index([organizationId, startsAt, status])
+  @@map("sessions")
+}
+
+model SessionTrainer {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  sessionId      String    @map("session_id") @db.Uuid
+  trainerId      String    @map("trainer_id") @db.Uuid
+  startsAt       DateTime? @map("starts_at") @db.Timestamptz(6)
+  endsAt         DateTime? @map("ends_at") @db.Timestamptz(6)
+  role           String    @default("PRIMARY") @db.VarChar(30)
+  bookingStatus  String    @default("CONFIRMED") @map("booking_status") @db.VarChar(30)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, sessionId, trainerId, role])
+  @@index([organizationId, trainerId, startsAt])
+  @@map("session_trainers")
+}

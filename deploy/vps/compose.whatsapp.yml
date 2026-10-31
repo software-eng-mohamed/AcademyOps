@@ -1,0 +1,76 @@
+services:
+  api-a:
+    environment:
+      OTP_CONNECTOR_INTERNAL_TOKEN: ${OTP_CONNECTOR_INTERNAL_TOKEN:?Set OTP_CONNECTOR_INTERNAL_TOKEN in runtime.env}
+    networks: [app, data, monitoring, otp-connector]
+
+  api-b:
+    environment:
+      OTP_CONNECTOR_INTERNAL_TOKEN: ${OTP_CONNECTOR_INTERNAL_TOKEN:?Set OTP_CONNECTOR_INTERNAL_TOKEN in runtime.env}
+    networks: [app, data, monitoring, otp-connector]
+
+  worker:
+    environment:
+      OTP_CONNECTOR_INTERNAL_TOKEN: ${OTP_CONNECTOR_INTERNAL_TOKEN:?Set OTP_CONNECTOR_INTERNAL_TOKEN in runtime.env}
+      OTP_CONNECTOR_URL: http://otp-connector:3002
+    networks: [data, egress, monitoring, otp-connector]
+    depends_on:
+      otp-connector:
+        condition: service_healthy
+
+  otp-connector:
+    image: plg-otp-connector:${IMAGE_TAG:-local}
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile.otp-connector
+    restart: unless-stopped
+    init: true
+    user: pptruser
+    read_only: true
+    shm_size: 512m
+    tmpfs:
+      - /tmp:size=512m,uid=10042,gid=10042,mode=0700
+    volumes:
+      - otp-connector-session:/sessions
+    environment:
+      NODE_ENV: production
+      OTP_CONNECTOR_INTERNAL_TOKEN: ${OTP_CONNECTOR_INTERNAL_TOKEN:?Set OTP_CONNECTOR_INTERNAL_TOKEN in runtime.env}
+      OTP_CONNECTOR_API_URLS: http://api-a:3001,http://api-b:3001
+      OTP_CONNECTOR_PORT: '3002'
+      OTP_CONNECTOR_CHROME_PATH: /usr/bin/google-chrome-stable
+      OTP_CONNECTOR_SESSION_PATH: /sessions
+      OTP_CONNECTOR_MAX_SESSIONS: '5'
+    networks: [otp-connector, egress]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 1024
+    ulimits: { nofile: { soft: 8192, hard: 8192 } }
+    mem_limit: ${OTP_CONNECTOR_MEM_LIMIT:-2g}
+    cpus: ${OTP_CONNECTOR_CPUS:-1.5}
+    logging:
+      driver: json-file
+      options: { max-size: 20m, max-file: '5' }
+    depends_on:
+      api-a:
+        condition: service_healthy
+      api-b:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3002/health/ready').then(r=>process.exit(!r.ok)).catch(()=>process.exit(1))",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+networks:
+  otp-connector:
+    internal: true
+
+volumes:
+  otp-connector-session:

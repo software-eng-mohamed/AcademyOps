@@ -1,0 +1,64 @@
+{
+  "name": "@academyops/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    "./workspace-overview": {
+      "types": "./dist/workspace-overview.d.ts",
+      "import": "./dist/workspace-overview.js",
+      "default": "./dist/workspace-overview.js"
+    },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./base-client": {
+      "types": "./dist/base-client.d.ts",
+      "import": "./dist/base-client.js",
+      "default": "./dist/base-client.js"
+    },
+    "./auth-client": {
+      "types": "./dist/auth-client.d.ts",
+      "import": "./dist/auth-client.js",
+      "default": "./dist/auth-client.js"
+    },
+    "./transport": {
+      "types": "./dist/transport.d.ts",
+      "import": "./dist/transport.js",
+      "default": "./dist/transport.js"
+    },
+    "./http": {
+      "types": "./dist/http/index.d.ts",
+      "import": "./dist/http/index.js",
+      "default": "./dist/http/index.js"
+    },
+    "./openapi": {
+      "types": "./dist/generated.d.ts",
+      "import": "./dist/generated.js",
+      "default": "./dist/generated.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "generate": "openapi-typescript openapi.json -o src/generated.ts",
+    "format": "biome format --write src test",
+    "lint": "biome check src test",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@academyops/contracts": "workspace:*",
+    "openapi-fetch": "0.15.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.10",
+    "@types/node": "24.10.1",
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  }
+}

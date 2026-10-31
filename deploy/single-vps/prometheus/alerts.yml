@@ -1,0 +1,44 @@
+groups:
+  - name: plg-foundation
+    rules:
+      - alert: ExporterDown
+        expr: up{job=~"api|worker|postgres|node|caddy"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Service exporter down: {{ $labels.job }}'
+
+      - alert: HostDiskNearlyFull
+        expr: |
+          (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}
+          / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) < 0.15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Less than 15% disk free on {{ $labels.instance }}'
+
+      - alert: HostMemoryPressure
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Less than 15% host memory available'
+
+      - alert: WorkerQueueLag
+        expr: plg_worker_bullmq_oldest_waiting_job_age_seconds > 300
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Oldest BullMQ worker job has waited more than 5 minutes'
+
+      - alert: WorkerOutboxLag
+        expr: plg_worker_outbox_oldest_available_event_age_seconds > 120
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Dispatchable outbox event is more than 2 minutes overdue'

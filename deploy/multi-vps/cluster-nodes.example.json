@@ -1,0 +1,26 @@
+[
+  {
+    "Name": "plg-vps1-ingress-monitoring",
+    "Role": "vps1",
+    "Id": "replace-with-instance-id",
+    "PublicIp": "203.0.113.10",
+    "PrivateIp": "10.0.1.10",
+    "Type": "m7i-flex.xlarge"
+  },
+  {
+    "Name": "plg-vps2-backend-worker",
+    "Role": "vps2",
+    "Id": "replace-with-instance-id",
+    "PublicIp": "203.0.113.20",
+    "PrivateIp": "10.0.1.20",
+    "Type": "m7i-flex.2xlarge"
+  },
+  {
+    "Name": "plg-vps3-database-redis",
+    "Role": "vps3",
+    "Id": "replace-with-instance-id",
+    "PublicIp": "203.0.113.30",
+    "PrivateIp": "10.0.1.30",
+    "Type": "m7i-flex.xlarge"
+  }
+]

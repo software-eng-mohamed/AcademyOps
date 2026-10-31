@@ -1,0 +1,17 @@
+# Reviewed synthetic test placeholders from historical commits. Fingerprint scoping ensures a
+# future secret in the same files is still reported.
+8316a82377b526369c076321661264d69f9b37a7:apps/api/test/postgres/certificate-authorization-regression.integration.test.ts:generic-api-key:26
+8316a82377b526369c076321661264d69f9b37a7:apps/api/test/postgres/certificate-test-helper.ts:generic-api-key:32
+8316a82377b526369c076321661264d69f9b37a7:apps/api/test/postgres/student-payable.integration.test.ts:generic-api-key:29
+8316a82377b526369c076321661264d69f9b37a7:apps/api/test/postgres/student-self-service.integration.test.ts:generic-api-key:32
+8316a82377b526369c076321661264d69f9b37a7:apps/web/test/owner-workspace.test.ts:generic-api-key:155
+8316a82377b526369c076321661264d69f9b37a7:apps/web/test/owner-workspace.test.ts:generic-api-key:163
+a09ff369e235316f466da95dac8f642a750440ef:apps/api/test/postgres/attendance-scan.integration.test.ts:generic-api-key:47
+a09ff369e235316f466da95dac8f642a750440ef:apps/api/test/postgres/attendance-finalize.integration.test.ts:generic-api-key:49
+b2a28c1a503019049048c3ce1489be7b4f4fff03:apps/api/test/phone-otp-mfa-postgres.integration.test.ts:generic-api-key:18
+308678101ae3aff891a18dc14a0663ca352068ed:.github/workflows/ci.yml:generic-api-key:48
+308678101ae3aff891a18dc14a0663ca352068ed:.github/workflows/ci.yml:generic-api-key:49
+308678101ae3aff891a18dc14a0663ca352068ed:.github/workflows/ci.yml:generic-api-key:51
+308678101ae3aff891a18dc14a0663ca352068ed:apps/api/test/environment.test.ts:generic-api-key:8
+308678101ae3aff891a18dc14a0663ca352068ed:apps/api/test/environment.test.ts:generic-api-key:9
+308678101ae3aff891a18dc14a0663ca352068ed:apps/api/test/environment.test.ts:generic-api-key:11

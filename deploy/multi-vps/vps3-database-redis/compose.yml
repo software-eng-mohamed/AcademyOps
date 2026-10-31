@@ -1,0 +1,182 @@
+name: plg-vps3-database-redis
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 20m
+    max-file: '5'
+
+services:
+  # --------------------------------------------------------------------------
+  # PostgreSQL 17 Relational Database
+  # --------------------------------------------------------------------------
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in runtime.env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in runtime.env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in runtime.env}
+    command:
+      - postgres
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - max_connections=300
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.track=all
+      - -c
+      - track_io_timing=on
+      - -c
+      - log_min_duration_statement=1000
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - '${VPS3_PRIVATE_IP}:5432:5432'
+    networks: [data]
+    shm_size: 512m
+    mem_limit: ${POSTGRES_MEM_LIMIT:-3g}
+    cpus: ${POSTGRES_CPUS:-2.0}
+    pids_limit: 512
+    security_opt: [no-new-privileges:true]
+    logging: *default-logging
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # --------------------------------------------------------------------------
+  # Redis 7.4 In-Memory Cache & Job Queue
+  # --------------------------------------------------------------------------
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in runtime.env}
+      REDIS_MAXMEMORY: ${REDIS_MAXMEMORY:-768mb}
+    command:
+      - redis-server
+      - --appendonly
+      - 'yes'
+      - --appendfsync
+      - everysec
+      - --requirepass
+      - ${REDIS_PASSWORD:?Set REDIS_PASSWORD in runtime.env}
+      - --maxmemory
+      - ${REDIS_MAXMEMORY:-768mb}
+      - --maxmemory-policy
+      - noeviction
+      - --tcp-keepalive
+      - '60'
+      - --timeout
+      - '0'
+    volumes:
+      - redis-data:/data
+    ports:
+      - '${VPS3_PRIVATE_IP}:6379:6379'
+    networks: [data]
+    mem_limit: ${REDIS_MEM_LIMIT:-1g}
+    cpus: ${REDIS_CPUS:-0.75}
+    pids_limit: 256
+    security_opt: [no-new-privileges:true]
+    logging: *default-logging
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # --------------------------------------------------------------------------
+  # Observability & Security Role Provisioner
+  # --------------------------------------------------------------------------
+  db-observability-init:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in runtime.env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in runtime.env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in runtime.env}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?Set POSTGRES_APP_PASSWORD in runtime.env}
+      POSTGRES_MIGRATE_PASSWORD: ${POSTGRES_MIGRATE_PASSWORD:?Set POSTGRES_MIGRATE_PASSWORD in runtime.env}
+      POSTGRES_EXPORTER_PASSWORD: ${POSTGRES_EXPORTER_PASSWORD:?Set POSTGRES_EXPORTER_PASSWORD in runtime.env}
+    entrypoint: [/bin/sh, /opt/plg/init-observability.sh]
+    volumes:
+      - ./postgres/init-observability.sh:/opt/plg/init-observability.sh:ro
+    networks: [data]
+    depends_on:
+      postgres: { condition: service_healthy }
+    security_opt: [no-new-privileges:true]
+
+  # --------------------------------------------------------------------------
+  # Prometheus PostgreSQL Exporter
+  # --------------------------------------------------------------------------
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.17.1
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: postgresql://plg_monitor:${POSTGRES_EXPORTER_PASSWORD:?Set POSTGRES_EXPORTER_PASSWORD in runtime.env}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+    ports:
+      - '${VPS3_PRIVATE_IP}:9187:9187'
+    networks: [data]
+    depends_on:
+      db-observability-init: { condition: service_completed_successfully }
+    security_opt: [no-new-privileges:true]
+
+  # --------------------------------------------------------------------------
+  # Prometheus Redis Exporter
+  # --------------------------------------------------------------------------
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.67.0-alpine
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in runtime.env}
+    ports:
+      - '${VPS3_PRIVATE_IP}:9121:9121'
+    networks: [data]
+    depends_on:
+      redis: { condition: service_healthy }
+    security_opt: [no-new-privileges:true]
+
+  # --------------------------------------------------------------------------
+  # Grafana Alloy Log Forwarder (Pushes logs to VPS 1 Loki)
+  # --------------------------------------------------------------------------
+  alloy:
+    image: grafana/alloy:v1.10.2
+    restart: unless-stopped
+    command: ['run', '/etc/alloy/config.alloy', '--storage.path=/var/lib/alloy/data']
+    environment:
+      VPS1_PRIVATE_IP: ${VPS1_PRIVATE_IP:?Set VPS1_PRIVATE_IP in runtime.env}
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - alloy-data:/var/lib/alloy/data
+    networks: [data]
+    security_opt: [no-new-privileges:true]
+    logging: *default-logging
+
+  # --------------------------------------------------------------------------
+  # Node Exporter
+  # --------------------------------------------------------------------------
+  node-exporter:
+    image: prom/node-exporter:v1.9.1
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /:/host:ro,rslave
+    ports:
+      - '${VPS3_PRIVATE_IP}:9100:9100'
+    pid: host
+    security_opt: [no-new-privileges:true]
+
+networks:
+  data:
+
+volumes:
+  postgres-data:
+  redis-data:
+  alloy-data:

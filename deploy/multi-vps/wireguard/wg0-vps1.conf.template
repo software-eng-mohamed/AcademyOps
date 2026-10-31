@@ -1,0 +1,20 @@
+[Interface]
+PrivateKey = ${VPS1_WG_PRIVATE_KEY}
+Address = 10.10.0.1/24
+ListenPort = 51820
+
+# Peer: VPS 2 (Backend & Workers)
+[Peer]
+PublicKey = ${VPS2_WG_PUBLIC_KEY}
+PresharedKey = ${CLUSTER_PRESHARED_KEY}
+Endpoint = ${VPS2_PUBLIC_IP}:51820
+AllowedIPs = 10.10.0.2/32
+PersistentKeepalive = 25
+
+# Peer: VPS 3 (PostgreSQL & Redis)
+[Peer]
+PublicKey = ${VPS3_WG_PUBLIC_KEY}
+PresharedKey = ${CLUSTER_PRESHARED_KEY}
+Endpoint = ${VPS3_PUBLIC_IP}:51820
+AllowedIPs = 10.10.0.3/32
+PersistentKeepalive = 25

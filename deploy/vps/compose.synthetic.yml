@@ -1,0 +1,110 @@
+services:
+  caddy:
+    command:
+      ['caddy', 'run', '--config', '/etc/caddy/Caddyfile.synthetic', '--adapter', 'caddyfile']
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?Set SITE_ADDRESS in runtime.env}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in runtime.env}
+      STORAGE_ADDRESS: ${STORAGE_ADDRESS:?Set STORAGE_ADDRESS in runtime.env}
+    ports:
+      - '80:8080'
+      - '443:8443'
+      - '443:8443/udp'
+    volumes:
+      - ./Caddyfile.synthetic:/etc/caddy/Caddyfile.synthetic:ro
+    tmpfs:
+      - /tmp:size=16m,uid=65532,gid=65532,mode=1777
+      - /data:size=64m,uid=65532,gid=65532,mode=0700
+      - /config:size=16m,uid=65532,gid=65532,mode=0700
+    depends_on:
+      minio:
+        condition: service_healthy
+
+  api-a:
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+
+  api-b:
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+
+  worker:
+    environment:
+      SMTP_HOST: mailpit
+      SMTP_PORT: '1025'
+      SMTP_SECURE: 'false'
+      SMTP_REQUIRE_TLS: 'true'
+      SMTP_TLS_SERVERNAME: mailpit
+      SMTP_USERNAME: sink-user
+      SMTP_PASSWORD: sink-password-not-a-secret
+      SMTP_FROM_EMAIL: no-reply@synthetic.invalid
+      SMTP_RETURN_PATH: bounce@synthetic.invalid
+      NODE_EXTRA_CA_CERTS: /run/mailpit/ca.crt
+    volumes:
+      - ./runtime/mailpit/ca.crt:/run/mailpit/ca.crt:ro
+    depends_on:
+      mailpit:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+
+  minio:
+    image: quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z@sha256:1dce27c494a16bae114774f1cec295493f3613142713130c2d22dd5696be6ad3
+    restart: unless-stopped
+    command: ['server', '/data', '--console-address', ':9001']
+    environment:
+      MINIO_ROOT_USER: ${R2_ACCESS_KEY_ID:?Set R2_ACCESS_KEY_ID in runtime.env}
+      MINIO_ROOT_PASSWORD: ${R2_SECRET_ACCESS_KEY:?Set R2_SECRET_ACCESS_KEY in runtime.env}
+      MINIO_SERVER_URL: ${R2_ENDPOINT:?Set R2_ENDPOINT in runtime.env}
+    volumes: [minio-data:/data]
+    networks: [app, data]
+    pids_limit: 256
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: [CMD, curl, -fsS, http://127.0.0.1:9000/minio/health/live]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio-init:
+    image: quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z@sha256:993e8c454a7ec632923f7e3e61adf1d473261da6354cefd641aedd33a2cfe112
+    environment:
+      MINIO_ROOT_USER: ${R2_ACCESS_KEY_ID:?Set R2_ACCESS_KEY_ID in runtime.env}
+      MINIO_ROOT_PASSWORD: ${R2_SECRET_ACCESS_KEY:?Set R2_SECRET_ACCESS_KEY in runtime.env}
+      R2_BUCKET: ${R2_BUCKET:?Set R2_BUCKET in runtime.env}
+    entrypoint: [/bin/sh, -ceu]
+    command:
+      - |
+        mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
+        mc mb --ignore-existing "local/$${R2_BUCKET}"
+        mc anonymous set none "local/$${R2_BUCKET}"
+    networks: [data]
+    depends_on:
+      minio:
+        condition: service_healthy
+    security_opt: [no-new-privileges:true]
+
+  mailpit:
+    image: axllent/mailpit:v1.30.0@sha256:0059ef81e492a7192af3816281eed6859eb078bd7bdc58b76757c13e10e53a7d
+    restart: unless-stopped
+    environment:
+      MP_SMTP_TLS_CERT: /run/mailpit/server.crt
+      MP_SMTP_TLS_KEY: /run/mailpit/server.key
+      MP_SMTP_REQUIRE_STARTTLS: 'true'
+      MP_SMTP_AUTH: sink-user:sink-password-not-a-secret
+    volumes:
+      - ./runtime/mailpit/server.crt:/run/mailpit/server.crt:ro
+      - ./runtime/mailpit/server.key:/run/mailpit/server.key:ro
+    ports: ['127.0.0.1:8025:8025']
+    networks: [data]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: [CMD, /mailpit, readyz]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  minio-data:

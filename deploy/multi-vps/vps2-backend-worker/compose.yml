@@ -1,0 +1,257 @@
+name: plg-vps2-backend-worker
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 20m
+    max-file: '5'
+
+x-app-common: &app-common
+  image: plg-backend:${IMAGE_TAG:-local}
+  build:
+    context: ../../..
+    dockerfile: deploy/Dockerfile.backend
+  restart: unless-stopped
+  init: true
+  read_only: true
+  tmpfs: ['/tmp:size=64m,mode=1777']
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 512
+  ulimits: { nofile: { soft: 65535, hard: 65535 } }
+  logging: *default-logging
+
+x-worker-environment: &worker-environment
+  NODE_ENV: production
+  API_PORT: '3001'
+  WEB_ORIGIN: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN in runtime.env}
+  REDIS_URL: ${REDIS_URL:?Set REDIS_URL in runtime.env}
+  METRICS_TOKEN: ${METRICS_TOKEN:?Set METRICS_TOKEN in runtime.env}
+  ACTION_TOKEN_ENCRYPTION_KEY: ${ACTION_TOKEN_ENCRYPTION_KEY:?Set ACTION_TOKEN_ENCRYPTION_KEY in runtime.env}
+  R2_ENDPOINT: ${R2_ENDPOINT:?Set R2_ENDPOINT in runtime.env}
+  R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:?Set R2_ACCESS_KEY_ID in runtime.env}
+  R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:?Set R2_SECRET_ACCESS_KEY in runtime.env}
+  R2_BUCKET: ${R2_BUCKET:?Set R2_BUCKET in runtime.env}
+
+x-api-environment: &api-environment
+  <<: *worker-environment
+  CLAMAV_MODE: clamd
+  CLAMAV_HOST: clamav
+  CLAMAV_PORT: '3310'
+  CLAMAV_TIMEOUT_MS: ${CLAMAV_TIMEOUT_MS:-5000}
+  TRUSTED_PROXY_IP: ${VPS1_PRIVATE_IP:?Set VPS1_PRIVATE_IP in runtime.env}
+  SESSION_PEPPER: ${SESSION_PEPPER:?Set SESSION_PEPPER in runtime.env}
+  QR_HMAC_SECRET: ${QR_HMAC_SECRET:?Set QR_HMAC_SECRET in runtime.env}
+  FILE_SIGNING_SECRET: ${FILE_SIGNING_SECRET:?Set FILE_SIGNING_SECRET in runtime.env}
+  MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:?Set MFA_ENCRYPTION_KEY in runtime.env}
+  MFA_RECOVERY_PEPPER: ${MFA_RECOVERY_PEPPER:?Set MFA_RECOVERY_PEPPER in runtime.env}
+  PASSWORD_RESET_PEPPER: ${PASSWORD_RESET_PEPPER:?Set PASSWORD_RESET_PEPPER in runtime.env}
+  PHONE_OTP_PEPPER: ${PHONE_OTP_PEPPER:?Set PHONE_OTP_PEPPER in runtime.env}
+  WHATSAPP_AUTH_ENCRYPTION_KEY: ${WHATSAPP_AUTH_ENCRYPTION_KEY:?Set WHATSAPP_AUTH_ENCRYPTION_KEY in runtime.env}
+  OTP_CONNECTOR_INTERNAL_TOKEN: ${OTP_CONNECTOR_INTERNAL_TOKEN:?Set OTP_CONNECTOR_INTERNAL_TOKEN in runtime.env}
+  COOKIE_SECURE: ${COOKIE_SECURE:-true}
+
+x-api-health: &api-health "fetch('http://127.0.0.1:3001/api/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+services:
+  # --------------------------------------------------------------------------
+  # Database Migration Runner
+  # --------------------------------------------------------------------------
+  migrate:
+    <<: *app-common
+    entrypoint: [/nodejs/bin/node]
+    command:
+      [api/node_modules/prisma/build/index.js, migrate, deploy, --schema=api/prisma/schema.prisma]
+    environment:
+      DATABASE_URL: ${MIGRATE_DATABASE_URL:?Set MIGRATE_DATABASE_URL in runtime.env}
+      DIRECT_URL: ${MIGRATE_DATABASE_URL:?Set MIGRATE_DATABASE_URL in runtime.env}
+    networks: [backend]
+    restart: 'no'
+
+  # --------------------------------------------------------------------------
+  # NestJS API Cluster (api-a on port 3001, api-b on port 3003)
+  # --------------------------------------------------------------------------
+  api-a: &api
+    <<: *app-common
+    environment:
+      <<: *api-environment
+      SERVICE_ROLE: api
+      DATABASE_URL: ${API_DATABASE_URL:?Set API_DATABASE_URL in runtime.env}
+      LEGACY_ARCHIVE_KEY: ${LEGACY_ARCHIVE_KEY:?Set LEGACY_ARCHIVE_KEY in runtime.env}
+      PAYMOB_BASE_URL: https://accept.paymob.com
+      PAYMOB_SECRET_KEY: ${PAYMOB_SECRET_KEY:?Set PAYMOB_SECRET_KEY in runtime.env}
+      PAYMOB_PUBLIC_KEY: ${PAYMOB_PUBLIC_KEY:?Set PAYMOB_PUBLIC_KEY in runtime.env}
+      PAYMOB_HMAC_SECRET: ${PAYMOB_HMAC_SECRET:?Set PAYMOB_HMAC_SECRET in runtime.env}
+      PAYMOB_PAYMENT_METHOD_IDS: ${PAYMOB_PAYMENT_METHOD_IDS:?Set PAYMOB_PAYMENT_METHOD_IDS in runtime.env}
+      PAYMOB_NOTIFICATION_URL: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN in runtime.env}/api/v1/webhooks/paymob/transaction
+      PAYMOB_REDIRECTION_URL: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN in runtime.env}/ar/payments/paymob/return
+      PAYMOB_CHECKOUT_ENCRYPTION_KEY: ${PAYMOB_CHECKOUT_ENCRYPTION_KEY:?Set PAYMOB_CHECKOUT_ENCRYPTION_KEY in runtime.env}
+    command: ['api/dist/main.js']
+    ports:
+      - '${VPS2_PRIVATE_IP}:3001:3001'
+    mem_limit: ${API_MEM_LIMIT:-1536m}
+    cpus: ${API_CPUS:-1.5}
+    networks: [backend]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      clamav: { condition: service_healthy }
+    healthcheck:
+      test: [CMD, /nodejs/bin/node, -e, *api-health]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  api-b:
+    <<: *api
+    ports:
+      - '${VPS2_PRIVATE_IP}:3003:3001'
+
+  # --------------------------------------------------------------------------
+  # BullMQ Background Worker
+  # --------------------------------------------------------------------------
+  worker:
+    <<: *app-common
+    environment:
+      <<: *worker-environment
+      SERVICE_ROLE: worker
+      DATABASE_URL: ${WORKER_DATABASE_URL:?Set WORKER_DATABASE_URL in runtime.env}
+      OTP_CONNECTOR_INTERNAL_TOKEN: ${OTP_CONNECTOR_INTERNAL_TOKEN:?Set OTP_CONNECTOR_INTERNAL_TOKEN in runtime.env}
+      OTP_CONNECTOR_URL: http://otp-connector:3002
+      SMTP_HOST: ${SMTP_HOST:?Set SMTP_HOST in runtime.env}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_REQUIRE_TLS: ${SMTP_REQUIRE_TLS:-true}
+      SMTP_TLS_SERVERNAME: ${SMTP_TLS_SERVERNAME:-}
+      SMTP_USERNAME: ${SMTP_USERNAME:?Set SMTP_USERNAME in runtime.env}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:?Set SMTP_PASSWORD in runtime.env}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:?Set SMTP_FROM_EMAIL in runtime.env}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-AcademyOps}
+      SMTP_RETURN_PATH: ${SMTP_RETURN_PATH:?Set SMTP_RETURN_PATH in runtime.env}
+    command: ['worker/dist/main.js']
+    mem_limit: ${WORKER_MEM_LIMIT:-1g}
+    cpus: ${WORKER_CPUS:-1.0}
+    networks: [backend]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      otp-connector: { condition: service_healthy }
+
+  # --------------------------------------------------------------------------
+  # WhatsApp Baileys OTP Connector
+  # --------------------------------------------------------------------------
+  otp-connector:
+    image: plg-otp-connector:${IMAGE_TAG:-local}
+    build:
+      context: ../../..
+      dockerfile: deploy/Dockerfile.otp-connector
+    restart: unless-stopped
+    init: true
+    user: pptruser
+    read_only: true
+    shm_size: 512m
+    tmpfs:
+      - /tmp:size=512m,uid=10042,gid=10042,mode=0700
+    volumes:
+      - otp-connector-session:/sessions
+    environment:
+      NODE_ENV: production
+      OTP_CONNECTOR_INTERNAL_TOKEN: ${OTP_CONNECTOR_INTERNAL_TOKEN:?Set OTP_CONNECTOR_INTERNAL_TOKEN in runtime.env}
+      OTP_CONNECTOR_API_URLS: http://api-a:3001,http://api-b:3001
+      OTP_CONNECTOR_PORT: '3002'
+      OTP_CONNECTOR_CHROME_PATH: /usr/bin/google-chrome-stable
+      OTP_CONNECTOR_SESSION_PATH: /sessions
+      OTP_CONNECTOR_MAX_SESSIONS: '5'
+    networks: [backend]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 1024
+    ulimits: { nofile: { soft: 8192, hard: 8192 } }
+    mem_limit: ${OTP_CONNECTOR_MEM_LIMIT:-2g}
+    cpus: ${OTP_CONNECTOR_CPUS:-1.5}
+    logging: *default-logging
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3002/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+  # --------------------------------------------------------------------------
+  # ClamAV Antivirus Daemon
+  # --------------------------------------------------------------------------
+  clamav:
+    image: clamav/clamav:latest
+    restart: unless-stopped
+    environment:
+      CLAMD_CONF_StreamMaxLength: 10M
+      CLAMD_CONF_MaxFileSize: 10M
+      CLAMD_CONF_MaxScanSize: 25M
+      CLAMD_CONF_MaxRecursion: '8'
+      CLAMD_CONF_MaxFiles: '1000'
+      CLAMD_CONF_MaxThreads: '2'
+      CLAMD_CONF_MaxQueue: '4'
+      CLAMD_CONF_ReadTimeout: '10'
+      CLAMD_CONF_CommandReadTimeout: '5'
+      CLAMD_CONF_ConcurrentDatabaseReload: 'no'
+      FRESHCLAM_CHECKS: '12'
+    volumes:
+      - clamav-signatures:/var/lib/clamav
+    networks: [backend]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 256
+    mem_limit: ${CLAMAV_MEM_LIMIT:-4g}
+    cpus: ${CLAMAV_CPUS:-1.0}
+    logging: *default-logging
+    healthcheck:
+      test: ['CMD', '/usr/local/bin/clamdcheck.sh']
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  # --------------------------------------------------------------------------
+  # Grafana Alloy Log Forwarder (Pushes logs to VPS 1 Loki)
+  # --------------------------------------------------------------------------
+  alloy:
+    image: grafana/alloy:v1.10.2
+    restart: unless-stopped
+    command: ['run', '/etc/alloy/config.alloy', '--storage.path=/var/lib/alloy/data']
+    environment:
+      VPS1_PRIVATE_IP: ${VPS1_PRIVATE_IP:?Set VPS1_PRIVATE_IP in runtime.env}
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - alloy-data:/var/lib/alloy/data
+    networks: [backend]
+    security_opt: [no-new-privileges:true]
+    logging: *default-logging
+
+  # --------------------------------------------------------------------------
+  # Node Exporter
+  # --------------------------------------------------------------------------
+  node-exporter:
+    image: prom/node-exporter:v1.9.1
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /:/host:ro,rslave
+    ports:
+      - '${VPS2_PRIVATE_IP}:9100:9100'
+    pid: host
+    security_opt: [no-new-privileges:true]
+
+networks:
+  backend:
+
+volumes:
+  otp-connector-session:
+  clamav-signatures:
+  alloy-data:

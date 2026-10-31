@@ -1,0 +1,21 @@
+diff --git a/src/Client.js b/src/Client.js
+--- a/src/Client.js
++++ b/src/Client.js
+@@ -1276,7 +1276,7 @@
+      */
+     async destroy() {
+         const browser = this.pupBrowser;
+-        const isConnected = browser?.isConnected?.();
++        const isConnected = browser?.connected;
+         if (isConnected) {
+             await browser.close();
+         }
+@@ -1293,7 +1293,7 @@
+         await this.pupBrowser.close();
+ 
+         let maxDelay = 0;
+-        while (this.pupBrowser.isConnected() && maxDelay < 10) {
++        while (this.pupBrowser.connected && maxDelay < 10) {
+             // waits a maximum of 1 second before calling the AuthStrategy
+             await new Promise((resolve) => setTimeout(resolve, 100));
+             maxDelay++;

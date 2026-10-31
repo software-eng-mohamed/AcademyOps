@@ -1,0 +1,13 @@
+# Disabled by default. Copy this file to optional/posthog.caddy to enable the
+# neutral same-origin ingest path. It exposes no PostHog admin API and embeds no token.
+handle_path /e/* {
+	reverse_proxy https://{$POSTHOG_INGEST_HOST} {
+		header_up Host {$POSTHOG_INGEST_HOST}
+		# Do not forward a browser address while project-level IP anonymization is disabled.
+		header_up -CF-Connecting-IP
+		header_up -Forwarded
+		header_up -True-Client-IP
+		header_up -X-Forwarded-For
+		header_up -X-Real-IP
+	}
+}

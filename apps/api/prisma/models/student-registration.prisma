@@ -1,0 +1,20 @@
+model StudentRegistration {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId   String    @map("organization_id") @db.Uuid
+  personId         String    @map("person_id") @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  status           String    @default("PENDING") @db.VarChar(30)
+  submittedAt      DateTime  @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  reviewedAt       DateTime? @map("reviewed_at") @db.Timestamptz(6)
+  reviewedByUserId String?   @map("reviewed_by_user_id") @db.Uuid
+  rejectionReason  String?   @map("rejection_reason") @db.Text
+  version          Int       @default(1)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, personId])
+  @@unique([organizationId, userId])
+  @@index([organizationId, status])
+  @@map("student_registrations")
+}

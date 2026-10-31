@@ -1,0 +1,46 @@
+name: WhatsApp OTP connector image
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: otp-connector-image-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build the isolated non-root connector
+        run: |
+          docker build --file deploy/Dockerfile.otp-connector \
+            --label org.opencontainers.image.revision=${{ github.sha }} \
+            --tag plg-academy-otp-connector:${{ github.sha }} .
+          test "$(docker image inspect plg-academy-otp-connector:${{ github.sha }} --format '{{.Config.User}}')" = pptruser
+      - name: Inventory connector image vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: plg-academy-otp-connector:${{ github.sha }}
+          severity: CRITICAL,HIGH,MEDIUM
+          ignore-unfixed: false
+          exit-code: '0'
+          format: table
+          timeout: 10m
+      - name: Block actionable connector image vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: plg-academy-otp-connector:${{ github.sha }}
+          severity: CRITICAL,HIGH,MEDIUM
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+          timeout: 10m

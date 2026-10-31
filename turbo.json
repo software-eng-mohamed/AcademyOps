@@ -1,0 +1,80 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "ACTION_TOKEN_ENCRYPTION_KEY",
+    "WHATSAPP_AUTH_ENCRYPTION_KEY",
+    "API_INTERNAL_URL",
+    "API_ORIGIN",
+    "API_PORT",
+    "CLAMAV_HOST",
+    "CLAMAV_MODE",
+    "CLAMAV_PORT",
+    "CLAMAV_TIMEOUT_MS",
+    "DATABASE_URL",
+    "DIRECT_URL",
+    "FILE_SIGNING_SECRET",
+    "LEGACY_ARCHIVE_KEY",
+    "MFA_ENCRYPTION_KEY",
+    "MFA_RECOVERY_PEPPER",
+    "METRICS_TOKEN",
+    "NEXT_PUBLIC_OBSERVABILITY_ENVIRONMENT",
+    "NEXT_PUBLIC_POSTHOG_ENABLED",
+    "NEXT_PUBLIC_POSTHOG_HOST",
+    "NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN",
+    "NEXT_PUBLIC_REALTIME_URL",
+    "NODE_ENV",
+    "OTP_CONNECTOR_INTERNAL_TOKEN",
+    "OTP_CONNECTOR_URL",
+    "PASSWORD_RESET_PEPPER",
+    "PAYMOB_BASE_URL",
+    "PAYMOB_CHECKOUT_ENCRYPTION_KEY",
+    "PAYMOB_HMAC_SECRET",
+    "PAYMOB_NOTIFICATION_URL",
+    "PAYMOB_PAYMENT_METHOD_IDS",
+    "PAYMOB_PUBLIC_KEY",
+    "PAYMOB_REDIRECTION_URL",
+    "PAYMOB_SECRET_KEY",
+    "PHONE_OTP_PEPPER",
+    "PRIVATE_FILE_STORAGE_ROOT",
+    "QR_HMAC_SECRET",
+    "R2_ACCESS_KEY_ID",
+    "R2_BUCKET",
+    "R2_ENDPOINT",
+    "R2_SECRET_ACCESS_KEY",
+    "REDIS_URL",
+    "SERVICE_ROLE",
+    "SESSION_PEPPER",
+    "SMTP_FROM_EMAIL",
+    "SMTP_FROM_NAME",
+    "SMTP_HOST",
+    "SMTP_PASSWORD",
+    "SMTP_PORT",
+    "SMTP_REQUIRE_TLS",
+    "SMTP_RETURN_PATH",
+    "SMTP_SECURE",
+    "SMTP_TLS_SERVERNAME",
+    "SMTP_USERNAME",
+    "WEB_ORIGIN",
+    "WORKER_METRICS_PORT"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "cache": false
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "exclusions": [
+    "PLG Learning Gate Design System — V1.0.md",
+    "apps/web/src/api/generated/**",
+    "apps/web/src/components/base/**",
+    "apps/web/src/styles/theme.css",
+    "apps/web/src/styles/typography.css",
+    "apps/web/src/app/globals.css",
+    "packages/api-client/src/generated.ts",
+    "apps/api/src/openapi-response-types.generated.ts",
+    "packages/api-client/openapi.json",
+    "pnpm-lock.yaml",
+    "apps/api/prisma/migrations/**",
+    "tests/web/mock-api.mjs",
+    "deploy/**",
+    "tests/**"
+  ],
+  "baseline": {
+    "apps/api/scripts/audit-real-academy-import.ts": 549,
+    "apps/api/scripts/audit-student-import-data.ts": 397,
+    "apps/api/scripts/import-real-academy-data.ts": 391,
+    "apps/api/scripts/reconcile-repaired-legacy-payment-dates.ts": 338,
+    "apps/api/src/crm/business-accounts/business-accounts.service.ts": 428,
+    "apps/api/src/finance/finance.controller.ts": 335,
+    "apps/api/src/imports/import-validation.service.ts": 321,
+    "packages/api-client/src/base-client.ts": 1070,
+    "packages/api-client/src/models.ts": 383,
+    "packages/api-client/src/owner-client.ts": 407,
+    "packages/ui/src/analytics/charts.tsx": 397,
+    "packages/ui/src/overlay.tsx": 396,
+    "apps/api/src/imports/xlsx-reader.ts": 318
+  }
+}

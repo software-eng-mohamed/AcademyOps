@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily PLG encrypted off-host PostgreSQL backup
+
+[Timer]
+OnCalendar=*-*-* 02:15:00
+RandomizedDelaySec=45m
+Persistent=true
+AccuracySec=1m
+Unit=plg-postgres-backup.service
+
+[Install]
+WantedBy=timers.target

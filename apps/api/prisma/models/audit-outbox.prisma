@@ -1,0 +1,38 @@
+model AuditEvent {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  actorUserId    String?  @map("actor_user_id") @db.Uuid
+  action         String   @db.VarChar(100)
+  entityType     String   @map("entity_type") @db.VarChar(80)
+  entityId       String?  @map("entity_id") @db.Uuid
+  correlationId  String   @map("correlation_id") @db.VarChar(128)
+  before         Json?    @db.JsonB
+  after          Json?    @db.JsonB
+  metadata       Json?    @db.JsonB
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, entityType, entityId, createdAt(sort: Desc)])
+  @@index([organizationId, actorUserId, createdAt(sort: Desc)])
+  @@map("audit_events")
+}
+
+model OutboxEvent {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  aggregateType  String    @map("aggregate_type") @db.VarChar(80)
+  aggregateId    String    @map("aggregate_id") @db.Uuid
+  type           String    @db.VarChar(100)
+  payload        Json      @db.JsonB
+  occurredAt     DateTime  @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  availableAt    DateTime  @default(now()) @map("available_at") @db.Timestamptz(6)
+  attempts       Int       @default(0)
+  processedAt    DateTime? @map("processed_at") @db.Timestamptz(6)
+  lastError      String?   @map("last_error")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([processedAt, availableAt, createdAt])
+  @@index([organizationId, aggregateType, aggregateId, occurredAt])
+  @@map("outbox_events")
+}

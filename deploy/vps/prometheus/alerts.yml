@@ -1,0 +1,76 @@
+groups:
+  - name: plg-foundation
+    rules:
+      - alert: ProbeDown
+        expr: probe_success == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'HTTP probe failed for {{ $labels.instance }}'
+
+      - alert: ExporterDown
+        expr: up{job=~"host|postgres|redis|api|worker"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Exporter down: {{ $labels.job }}'
+
+      - alert: HostDiskNearlyFull
+        expr: |
+          (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}
+          / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) < 0.15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Less than 15% disk free on {{ $labels.instance }}'
+
+      - alert: HostMemoryPressure
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Less than 15% host memory available'
+
+      - alert: PostgresOffsiteBackupMissing
+        expr: absent(plg_postgres_backup_last_success_timestamp_seconds) == 1
+        for: 30m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'No remotely verified PostgreSQL backup success metric is available'
+
+      - alert: PostgresOffsiteBackupStale
+        expr: time() - plg_postgres_backup_last_success_timestamp_seconds > 108000
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'The last remotely verified PostgreSQL backup is older than 30 hours'
+
+      - alert: WorkerMetricsSourceDown
+        expr: plg_worker_observability_source_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Worker metrics source unavailable: {{ $labels.source }}'
+
+      - alert: WorkerQueueLag
+        expr: plg_worker_bullmq_oldest_waiting_job_age_seconds > 300
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Oldest worker job has waited more than five minutes'
+
+      - alert: WorkerOutboxLag
+        expr: plg_worker_outbox_oldest_available_event_age_seconds > 120
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Dispatchable outbox event is more than two minutes overdue'

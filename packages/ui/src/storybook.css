@@ -1,0 +1,47 @@
+@import "tailwindcss";
+@import "@academyops/design-tokens/theme.css";
+@source "./**/*.{ts,tsx}";
+
+@theme inline {
+  --color-canvas: var(--plg-color-canvas);
+  --color-workspace: var(--plg-color-workspace);
+  --color-surface: var(--plg-color-surface);
+  --color-surface-subtle: var(--plg-color-surface-subtle);
+  --color-ink: var(--plg-color-ink);
+  --color-ink-muted: var(--plg-color-ink-muted);
+  --color-border: var(--plg-color-border);
+  --color-border-strong: var(--plg-color-border-strong);
+  --color-brand: var(--plg-color-brand);
+  --color-brand-strong: var(--plg-color-brand-strong);
+  --color-brand-bright: var(--plg-color-brand-bright);
+  --color-brand-highlight: var(--plg-color-brand-highlight);
+  --color-brand-soft: var(--plg-color-brand-soft);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--plg-color-accent);
+  --color-accent-soft: var(--plg-color-accent-soft);
+  --color-success: var(--plg-color-success);
+  --color-success-soft: var(--plg-color-success-soft);
+  --color-warning: var(--plg-color-warning);
+  --color-warning-soft: var(--plg-color-warning-soft);
+  --color-danger: var(--plg-color-danger);
+  --color-danger-soft: var(--plg-color-danger-soft);
+  --color-info: var(--plg-color-info);
+  --color-info-soft: var(--plg-color-info-soft);
+  --color-focus: var(--plg-color-focus);
+  --font-sans: var(--plg-font-sans);
+  --font-mono: var(--plg-font-mono);
+  --radius-sm: var(--plg-radius-sm);
+  --radius-md: var(--plg-radius-md);
+  --radius-lg: var(--plg-radius-lg);
+  --shadow-card: var(--plg-shadow-card);
+  --shadow-control: var(--plg-shadow-control);
+  --shadow-raised: var(--plg-shadow-raised);
+  --shadow-popover: var(--plg-shadow-popover);
+}
+
+body {
+  margin: 0;
+  background: var(--plg-color-canvas);
+  color: var(--plg-color-ink);
+  font-family: var(--plg-font-sans);
+}

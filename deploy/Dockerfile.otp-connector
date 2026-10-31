@@ -1,0 +1,54 @@
+FROM node:22-bookworm-slim@sha256:d649c27dae7ba0137b3cef5dd75baa422c08dc3d9e3fc0c23dfb172dc3cc6436 AS build
+
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+
+WORKDIR /app
+
+RUN corepack enable
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json ./
+COPY patches patches
+COPY apps/otp-connector/package.json apps/otp-connector/package.json
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+  pnpm config set store-dir /pnpm/store \
+  && pnpm install --frozen-lockfile
+
+COPY apps/otp-connector apps/otp-connector
+
+RUN pnpm --filter @academyops/otp-connector build \
+  && pnpm --filter @academyops/otp-connector --prod deploy --legacy /prod/otp-connector \
+  && find /prod/otp-connector/dist -type f \
+    \( -name '*.js.map' -o -name '*.d.ts' -o -name '*.d.ts.map' \) -delete
+
+FROM ghcr.io/puppeteer/puppeteer:25.16.0@sha256:956a72e3d523c76606efaad23392fbe33950370189f749715222c7427f57392b AS runtime
+
+USER root
+RUN apt-get update \
+  && apt-get upgrade -y --no-install-recommends \
+  && apt-get clean \
+  && rm -rf \
+    /home/pptruser/.npm \
+    /home/pptruser/node_modules \
+    /usr/local/lib/node_modules/npm \
+    /usr/local/bin/npm \
+    /usr/local/bin/npx \
+    /var/lib/apt/lists/* \
+  && mkdir -p /app /sessions \
+  && chown -R pptruser:pptruser /app /sessions
+RUN chrome_path="$(find /home/pptruser/.cache/puppeteer/chrome -type f -path '*/chrome-linux64/chrome' -print -quit)" \
+  && test -n "$chrome_path" \
+  && ln -s "$chrome_path" /usr/bin/google-chrome-stable
+COPY --from=build --chown=pptruser:pptruser /prod/otp-connector /app
+
+ENV NODE_ENV=production
+ENV OTP_CONNECTOR_CHROME_PATH=/usr/bin/google-chrome-stable
+ENV OTP_CONNECTOR_SESSION_PATH=/sessions
+
+WORKDIR /app
+USER pptruser
+
+EXPOSE 3002
+CMD ["node", "dist/main.js"]

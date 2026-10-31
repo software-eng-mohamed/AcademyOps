@@ -1,0 +1,221 @@
+@keyframes plg-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes plg-overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes plg-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes plg-popover-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-2px) scale(0.99);
+  }
+}
+
+@keyframes plg-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes plg-modal-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.99);
+  }
+}
+
+@keyframes plg-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--plg-sheet-offscreen, calc(100% + 1rem)));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes plg-sheet-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(var(--plg-sheet-offscreen, calc(100% + 1rem)));
+  }
+}
+
+@keyframes plg-navigation-in {
+  from {
+    transform: translateX(var(--plg-navigation-offscreen));
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes plg-navigation-out {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(var(--plg-navigation-offscreen));
+  }
+}
+
+@keyframes plg-search-in {
+  from {
+    opacity: 0;
+    translate: -50% -4px;
+    scale: 0.985;
+  }
+  to {
+    opacity: 1;
+    translate: -50% 0;
+    scale: 1;
+  }
+}
+
+.plg-dialog-overlay[data-state='open'],
+.plg-dialog-overlay[data-open] {
+  animation: plg-overlay-in 180ms ease-out both;
+}
+.plg-dialog-overlay[data-state='closed'],
+.plg-dialog-overlay[data-closed] {
+  animation: plg-overlay-out 140ms ease-out both;
+}
+.plg-popover-content[data-state='open'],
+.plg-popover-content[data-open] {
+  animation: plg-popover-in var(--plg-motion-popover) var(--plg-ease-out) both;
+}
+.plg-popover-content[data-state='closed'],
+.plg-popover-content[data-closed] {
+  animation: plg-popover-out 130ms ease-out both;
+}
+.plg-modal-content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+}
+.plg-modal-content[data-state='open'],
+.plg-modal-content[data-open] {
+  animation: plg-modal-in var(--plg-motion-modal) var(--plg-ease-out) both;
+}
+.plg-modal-content[data-state='closed'],
+.plg-modal-content[data-closed] {
+  animation: plg-modal-out 150ms ease-out both;
+}
+.plg-sheet-content {
+  --plg-sheet-offscreen: calc(100% + 1rem);
+}
+.plg-sheet-content:dir(rtl),
+.plg-sheet-content[dir='rtl'],
+[dir='rtl'] .plg-sheet-content {
+  --plg-sheet-offscreen: calc(-100% - 1rem);
+}
+.plg-sheet-content[data-state='open'],
+.plg-sheet-content[data-open] {
+  animation: plg-sheet-in var(--plg-motion-sheet) var(--plg-ease-out) both;
+}
+.plg-sheet-content[data-state='closed'],
+.plg-sheet-content[data-closed] {
+  animation: plg-sheet-out 220ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.plg-dialog-overlay[data-plg-overlay='sheet'][data-state='open'],
+.plg-dialog-overlay[data-plg-overlay='sheet'][data-open] {
+  animation-duration: var(--plg-motion-sheet);
+}
+.plg-dialog-overlay[data-plg-overlay='sheet'][data-state='closed'],
+.plg-dialog-overlay[data-plg-overlay='sheet'][data-closed] {
+  animation-duration: 220ms;
+}
+.plg-navigation-content {
+  --plg-navigation-offscreen: -100%;
+}
+.plg-navigation-content:dir(rtl) {
+  --plg-navigation-offscreen: 100%;
+}
+.plg-navigation-content[data-state='open'],
+.plg-navigation-content[data-open] {
+  animation: plg-navigation-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+/* Radix keeps the drawer mounted until this exit animation finishes. */
+.plg-navigation-content[data-state='closed'],
+.plg-navigation-content[data-closed] {
+  animation: plg-navigation-out 240ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.plg-dialog-overlay[data-plg-overlay='navigation'][data-state='open'],
+.plg-dialog-overlay[data-plg-overlay='navigation'][data-open] {
+  animation-duration: 280ms;
+}
+.plg-dialog-overlay[data-plg-overlay='navigation'][data-state='closed'],
+.plg-dialog-overlay[data-plg-overlay='navigation'][data-closed] {
+  animation-duration: 240ms;
+}
+.plg-search-content[data-state='open'],
+.plg-search-content[data-open] {
+  animation: plg-search-in var(--plg-motion-popover) var(--plg-ease-out) both;
+}
+
+.plg-toast[data-starting-style],
+.plg-toast[data-ending-style] {
+  opacity: 0;
+  transform: translateY(6px) scale(0.985);
+}
+
+.plg-toast {
+  transition:
+    opacity var(--plg-motion-popover) var(--plg-ease-out),
+    transform var(--plg-motion-popover) var(--plg-ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plg-dialog-overlay,
+  .plg-popover-content,
+  .plg-modal-content,
+  .plg-sheet-content,
+  .plg-navigation-content,
+  .plg-search-content,
+  .plg-toast {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}

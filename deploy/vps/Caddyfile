@@ -1,0 +1,58 @@
+{
+	admin off
+	servers {
+		protocols h1 h2 h3
+		# Only the fixed cloudflared peer may supply the Cloudflare-owned client IP header.
+		trusted_proxies static 172.30.241.2/32
+		client_ip_headers CF-Connecting-IP
+		timeouts {
+			read_body 120s
+			read_header 10s
+			write 120s
+			idle 2m
+		}
+		max_header_size 32KB
+	}
+}
+
+# TLS terminates at Cloudflare. This listener only exists on the internal origin network.
+:8080 {
+	encode zstd gzip
+
+	@internalMetrics path /api/v1/internal/metrics
+	respond @internalMetrics 404
+	@internalOtpConnector path /api/v1/internal/otp-connector /api/v1/internal/otp-connector/*
+	respond @internalOtpConnector 404
+
+	@backend path /api/* /socket.io /socket.io/*
+	reverse_proxy @backend api-a:3001 api-b:3001 {
+		header_up X-Forwarded-For {client_ip}
+		lb_policy least_conn
+		lb_try_duration 5s
+		fail_duration 30s
+		max_fails 3
+		health_uri /api/v1/health/live
+		health_interval 15s
+		health_timeout 3s
+	}
+
+	# Empty by default. A reviewed optional route can be mounted here.
+	import /etc/caddy/optional/*.caddy
+
+	reverse_proxy web:3100 {
+		header_up X-Forwarded-For {client_ip}
+	}
+
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

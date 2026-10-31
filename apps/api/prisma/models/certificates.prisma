@@ -1,0 +1,96 @@
+model CertificateRuleVersion {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId   String    @map("organization_id") @db.Uuid
+  programVersionId String    @map("program_version_id") @db.Uuid
+  cohortId         String?   @map("cohort_id") @db.Uuid
+  version          Int
+  minimumRatio     Decimal   @default(0.80) @map("minimum_ratio") @db.Decimal(5, 4)
+  effectiveFrom    DateTime  @map("effective_from") @db.Timestamptz(6)
+  effectiveTo      DateTime? @map("effective_to") @db.Timestamptz(6)
+  createdBy        String    @map("created_by") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, programVersionId, cohortId, version])
+  @@map("certificate_rule_versions")
+}
+
+model EligibilityEvaluation {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId   String   @map("organization_id") @db.Uuid
+  enrollmentId     String   @map("enrollment_id") @db.Uuid
+  ruleVersionId    String   @map("rule_version_id") @db.Uuid
+  attendanceRatio  Decimal? @map("attendance_ratio") @db.Decimal(5, 4)
+  academicResult   String   @map("academic_result") @db.VarChar(30)
+  financialHold    Boolean  @map("financial_hold")
+  evidenceSnapshot Json     @map("evidence_snapshot") @db.JsonB
+  evaluatedAt      DateTime @default(now()) @map("evaluated_at") @db.Timestamptz(6)
+  evaluatedBy      String?  @map("evaluated_by") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, enrollmentId, evaluatedAt(sort: Desc)])
+  @@map("eligibility_evaluations")
+}
+
+model FileAsset {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  storageKey     String   @map("storage_key")
+  contentType    String   @map("content_type") @db.VarChar(100)
+  sizeBytes      BigInt   @map("size_bytes")
+  sha256         String   @db.Char(64)
+  classification String   @default("PRIVATE") @db.VarChar(30)
+  scanStatus     String   @default("PENDING") @map("scan_status") @db.VarChar(30)
+  createdBy      String   @map("created_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, storageKey])
+  @@map("file_assets")
+}
+
+model Certificate {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId     String    @map("organization_id") @db.Uuid
+  enrollmentId       String    @map("enrollment_id") @db.Uuid
+  evaluationId       String    @map("evaluation_id") @db.Uuid
+  supersedesId       String?   @map("supersedes_id") @db.Uuid
+  serial             String    @db.VarChar(80)
+  verificationDigest String    @map("verification_digest") @db.VarChar(128)
+  validityStatus     String    @default("ISSUED") @map("validity_status") @db.VarChar(30)
+  fulfillmentStatus  String    @default("NOT_PRINTED") @map("fulfillment_status") @db.VarChar(30)
+  pdfStatus          String    @default("PENDING_UPLOAD") @map("pdf_status") @db.VarChar(30)
+  fileAssetId        String?   @map("file_asset_id") @db.Uuid
+  issuedAt           DateTime  @default(now()) @map("issued_at") @db.Timestamptz(6)
+  issuedBy           String    @map("issued_by") @db.Uuid
+  revokedAt          DateTime? @map("revoked_at") @db.Timestamptz(6)
+  revokedBy          String?   @map("revoked_by") @db.Uuid
+  revocationReason   String?   @map("revocation_reason")
+  version            Int       @default(1)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([serial])
+  @@unique([verificationDigest])
+  @@index([organizationId, enrollmentId, issuedAt(sort: Desc)])
+  @@index([organizationId, validityStatus, issuedAt(sort: Desc)])
+  @@map("certificates")
+}
+
+model CertificateEvent {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  certificateId  String   @map("certificate_id") @db.Uuid
+  type           String   @db.VarChar(50)
+  fromValue      String?  @map("from_value")
+  toValue        String?  @map("to_value")
+  reason         String?
+  actorUserId    String?  @map("actor_user_id") @db.Uuid
+  occurredAt     DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, certificateId, occurredAt])
+  @@map("certificate_events")
+}

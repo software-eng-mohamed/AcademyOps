@@ -1,0 +1,47 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+scrape_configs:
+  # VPS 1 Local Scrapes
+  - job_name: 'vps1-caddy'
+    static_configs:
+      - targets: ['caddy:2019']
+
+  - job_name: 'vps1-node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # VPS 2 Application Scrapes
+  - job_name: 'vps2-api'
+    metrics_path: '/api/v1/internal/metrics'
+    authorization:
+      type: Bearer
+      credentials: '${METRICS_TOKEN}'
+    static_configs:
+      - targets: ['10.10.0.2:3001', '10.10.0.2:3003']
+
+  - job_name: 'vps2-node'
+    static_configs:
+      - targets: ['10.10.0.2:9100']
+
+  # VPS 3 Database & Redis Scrapes
+  - job_name: 'vps3-postgres'
+    static_configs:
+      - targets: ['10.10.0.3:9187']
+
+  - job_name: 'vps3-redis'
+    static_configs:
+      - targets: ['10.10.0.3:9121']
+
+  - job_name: 'vps3-node'
+    static_configs:
+      - targets: ['10.10.0.3:9100']

@@ -1,0 +1,293 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Code, schema, and contract gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17.6-alpine@sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94
+        env:
+          POSTGRES_DB: plg_academy
+          POSTGRES_USER: plg
+          POSTGRES_PASSWORD: plg_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U plg -d plg_academy"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7.4.5-alpine@sha256:bb186d083732f669da90be8b0f975a37812b15e913465bb14d845db72a4e3e08
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      API_PORT: 3001
+      WEB_ORIGIN: http://localhost:3000
+      API_ORIGIN: http://localhost:3001
+      API_INTERNAL_URL: http://localhost:3001/api/v1
+      NEXT_PUBLIC_REALTIME_URL: https://api.example.com
+      DATABASE_URL: postgresql://plg:plg_ci_only@localhost:5432/plg_academy?schema=public
+      DIRECT_URL: postgresql://plg:plg_ci_only@localhost:5432/plg_academy?schema=public
+      REDIS_URL: redis://localhost:6379
+      SESSION_PEPPER: '000000000000000000000000000000000000000000000000'
+      QR_HMAC_SECRET: '111111111111111111111111111111111111111111111111'
+      FILE_SIGNING_SECRET: '222222222222222222222222222222222222222222222222'
+      MFA_ENCRYPTION_KEY: '333333333333333333333333333333333333333333333333'
+      MFA_RECOVERY_PEPPER: '444444444444444444444444444444444444444444444444'
+      PASSWORD_RESET_PEPPER: '555555555555555555555555555555555555555555555555'
+      PHONE_OTP_PEPPER: '666666666666666666666666666666666666666666666666'
+      ACTION_TOKEN_ENCRYPTION_KEY: '777777777777777777777777777777777777777777777777'
+      LEGACY_ARCHIVE_KEY: '888888888888888888888888888888888888888888888888'
+      WHATSAPP_AUTH_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      CLAMAV_MODE: disabled
+      OTP_CONNECTOR_INTERNAL_TOKEN: '9999999999999999999999999999999999999999999999999999999999999999'
+      OTP_CONNECTOR_URL: http://localhost:3002
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Exercise signed-release rejection boundaries
+        run: sudo sh deploy/vps/scripts/test-release-authenticity.sh
+      - name: Exercise local backup retention confinement
+        run: sh deploy/vps/scripts/test-backup-retention.sh
+      - name: Scan the checked-out source tree for secrets
+        run: >-
+          docker run --rm -v "$PWD:/repo"
+          zricethezav/gitleaks:v8.28.0@sha256:cdbb7c955abce02001a9f6c9f602fb195b7fadc1e812065883f695d1eeaba854
+          dir /repo --redact --no-banner
+      - name: Lint GitHub Actions workflows
+        run: >-
+          docker run --rm -v "$PWD:/repo" -w /repo
+          rhysd/actionlint:1.7.7@sha256:887a259a5a534f3c4f36cb02dca341673c6089431057242cdc931e9f133147e9
+      - name: Validate deployment shell syntax
+        run: for script in deploy/vps/scripts/*.sh; do sh -n "$script"; done
+      - name: Validate hardened backup systemd units
+        run: DEPLOY_USER="$(id -un)" sh deploy/vps/scripts/install-backup-schedule.sh --verify-only
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 11.16.0
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Reject floating dependency ranges
+        run: pnpm dependencies:check
+      - name: Install immutable dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Reject vulnerable production dependencies
+        run: pnpm audit:prod
+      - name: Reject denied production licenses
+        run: pnpm licenses:check
+      - name: Generate Prisma client
+        run: pnpm db:generate
+      - name: Validate Prisma schema
+        run: pnpm db:validate
+      - name: Apply migrations to clean PostgreSQL
+        run: pnpm db:deploy
+      - name: Verify generated API contract is committed
+        run: |
+          pnpm api:generate
+          git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/generated.ts
+      - name: Enforce source line limits
+        run: pnpm max-lines
+      - name: Check formatting
+        run: pnpm format:check
+      - name: Lint workspace
+        run: pnpm lint
+      - name: Type-check workspace
+        run: pnpm typecheck
+      - name: Validate the production web API boundary and acceptance harness
+        run: pnpm --filter @academyops/web api:check && pnpm web:e2e:lint && pnpm web:e2e:typecheck && pnpm e2e:fixture:typecheck
+      - name: Inventory browser acceptance scenarios
+        run: pnpm web:e2e:list
+      - name: Validate staged load harness and guarded fixture tooling
+        run: pnpm load:verify
+      - name: Run tests against PostgreSQL and Redis
+        run: pnpm test
+      - name: Build production artifacts
+        env:
+          NODE_ENV: production
+          API_ORIGIN: https://academy.example.test
+          API_INTERNAL_URL: https://academy.example.test/api/v1
+          NEXT_PUBLIC_REALTIME_URL: https://academy.example.test
+          WHATSAPP_AUTH_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+        run: pnpm build
+
+  production-images:
+    name: Attest production images and deployment configuration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Create an ephemeral CI release signer
+        run: |
+          key="$RUNNER_TEMP/ci-release-signing-key"
+          ssh-keygen -q -t ed25519 -N '' -C plg-release-ci -f "$key"
+          sudo install -d -o root -g root -m 0755 /etc/plg-ci
+          { printf 'plg-release '; cat "$key.pub"; } > "$RUNNER_TEMP/trusted_release_signers"
+          sudo install -o root -g root -m 0644 "$RUNNER_TEMP/trusted_release_signers" /etc/plg-ci/trusted_release_signers
+          echo "RELEASE_SIGNING_KEY_FILE=$key" >> "$GITHUB_ENV"
+          echo 'RELEASE_ALLOWED_SIGNERS_FILE=/etc/plg-ci/trusted_release_signers' >> "$GITHUB_ENV"
+      - name: Validate production and synthetic Compose models
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker compose version
+          docker compose --env-file deploy/vps/runtime.env.example -f deploy/vps/compose.yml -f deploy/vps/compose.cloudflare.yml config --quiet
+          docker compose --env-file deploy/vps/runtime.env.example -f deploy/vps/compose.yml -f deploy/vps/compose.cloudflare.yml -f deploy/vps/compose.clamav.yml -f deploy/vps/compose.whatsapp.yml -f deploy/vps/compose.monitoring.yml config --quiet
+          docker compose --env-file deploy/vps/runtime.env.example -f deploy/vps/compose.yml -f deploy/vps/compose.synthetic.yml config --quiet
+          docker compose --env-file deploy/vps/runtime.env.example -f deploy/vps/compose.yml -f deploy/vps/compose.synthetic.yml -f deploy/vps/compose.clamav.yml -f deploy/vps/compose.whatsapp.yml -f deploy/vps/compose.monitoring.yml config --quiet
+      - name: Validate production and synthetic Caddy configurations
+        run: |
+          image='caddy:2.10.2-alpine@sha256:c3d7ee5d2b11f9dc54f947f68a734c84e9c9666c92c88a7f30b9cba5da182adb'
+          docker run --rm -e SITE_ADDRESS=academy.example.test -e ACME_EMAIL=ops@example.test \
+            -v "$PWD/deploy/vps/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            -v "$PWD/deploy/vps/caddy/optional:/etc/caddy/optional:ro" \
+            "$image" caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          docker run --rm -e SITE_ADDRESS=academy.example.test -e STORAGE_ADDRESS=files.example.test \
+            -e ACME_EMAIL=ops@example.test \
+            -v "$PWD/deploy/vps/Caddyfile.synthetic:/etc/caddy/Caddyfile.synthetic:ro" \
+            -v "$PWD/deploy/vps/caddy/optional:/etc/caddy/optional:ro" \
+            "$image" caddy validate --config /etc/caddy/Caddyfile.synthetic --adapter caddyfile
+          sh deploy/vps/scripts/test-caddy-realtime-routing.sh
+      - name: Build API and worker image
+        run: >-
+          docker build
+          --file deploy/Dockerfile.backend
+          --label org.opencontainers.image.revision=${{ github.sha }}
+          --tag plg-academy-backend:${{ github.sha }}
+          .
+      - name: Build web image
+        run: >-
+          docker build
+          --file deploy/Dockerfile.web
+          --build-arg API_ORIGIN=https://academy.example.test
+          --build-arg API_INTERNAL_URL=https://academy.example.test/api/v1
+          --build-arg NEXT_PUBLIC_REALTIME_URL=https://academy.example.test
+          --build-arg NEXT_PUBLIC_POSTHOG_ENABLED=false
+          --label org.opencontainers.image.revision=${{ github.sha }}
+          --tag plg-academy-web:${{ github.sha }}
+          .
+      - name: Build WhatsApp OTP connector image
+        run: |
+          docker build --file deploy/Dockerfile.otp-connector \
+            --label org.opencontainers.image.revision=${{ github.sha }} \
+            --tag plg-academy-otp-connector:${{ github.sha }} .
+          test "$(docker image inspect plg-academy-otp-connector:${{ github.sha }} --format '{{.Config.User}}')" = pptruser
+      - name: Tag images for release attestation
+        run: |
+          docker tag plg-academy-backend:${{ github.sha }} plg-backend:${{ github.sha }}
+          docker tag plg-academy-web:${{ github.sha }} plg-web:${{ github.sha }}
+          docker tag plg-academy-otp-connector:${{ github.sha }} plg-otp-connector:${{ github.sha }}
+      - name: Verify minimal non-root backend runtime image
+        run: |
+          image="plg-academy-backend:${{ github.sha }}"
+          test "$(docker image inspect "$image" --format '{{.Config.User}}')" = "65532:65532"
+          test "$(docker image inspect "$image" --format '{{json .Config.Entrypoint}}')" = '["/nodejs/bin/node"]'
+          expected_node_version="v$(cat .nvmrc)"
+          actual_node_version="$(docker run --rm "$image" --version)"
+          printf 'Backend Node runtime: actual=%s expected=%s\n' "$actual_node_version" "$expected_node_version"
+          test "$actual_node_version" = "$expected_node_version"
+          container_id="$(docker create "$image")"
+          trap 'docker rm -f "$container_id" >/dev/null; rm -f image-files.txt' EXIT
+          docker export "$container_id" | tar -tf - > image-files.txt
+          if grep -Eq '^app/(api|worker)/(src|test)(/|$)' image-files.txt; then
+            echo 'Runtime image contains application source or tests.' >&2
+            exit 1
+          fi
+          if grep -Eq '(^|/)\.env($|\.)' image-files.txt; then
+            echo 'Runtime image contains an environment file.' >&2
+            exit 1
+          fi
+          if grep -Eq '^bin/(ba)?sh$' image-files.txt; then
+            echo 'Runtime image contains an interactive shell.' >&2
+            exit 1
+          fi
+      - name: Verify minimal non-root web runtime image
+        run: |
+          image="plg-academy-web:${{ github.sha }}"
+          test "$(docker image inspect "$image" --format '{{.Config.User}}')" = "65532:65532"
+          test "$(docker image inspect "$image" --format '{{json .Config.Cmd}}')" = '["apps/web/server.js"]'
+          container_id="$(docker create "$image")"
+          trap 'docker rm -f "$container_id" >/dev/null; rm -f web-image-files.txt' EXIT
+          docker export "$container_id" | tar -tf - > web-image-files.txt
+          if grep -Eq '(^|/)\.env($|\.)' web-image-files.txt; then
+            echo 'Web runtime image contains an environment file.' >&2
+            exit 1
+          fi
+          if grep -Eq '^bin/(ba)?sh$' web-image-files.txt; then
+            echo 'Web runtime image contains an interactive shell.' >&2
+            exit 1
+          fi
+      - name: Generate immutable release provenance manifest
+        env:
+          SOURCE_GIT_SHA: ${{ github.sha }}
+        run: |
+          sh deploy/vps/scripts/create-release-manifest.sh "$RUNNER_TEMP/release.manifest" expand-only
+          sh -c '. deploy/vps/scripts/release-common.sh; verify_release_manifest "$1"' \
+            -- "$RUNNER_TEMP/release.manifest"
+      - name: Reclaim Docker build cache before image scans
+        run: docker builder prune --all --force && docker image prune --force && docker system df
+      - name: Inventory backend image vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: plg-academy-backend:${{ github.sha }}
+          severity: CRITICAL,HIGH,MEDIUM
+          ignore-unfixed: false
+          exit-code: '0'
+          format: table
+          timeout: 10m
+      - name: Block actionable backend image vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: plg-academy-backend:${{ github.sha }}
+          severity: CRITICAL,HIGH,MEDIUM
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+          timeout: 10m
+      - name: Inventory web image vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: plg-academy-web:${{ github.sha }}
+          severity: CRITICAL,HIGH,MEDIUM
+          ignore-unfixed: false
+          exit-code: '0'
+          format: table
+          timeout: 10m
+      - name: Block actionable web image vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: plg-academy-web:${{ github.sha }}
+          severity: CRITICAL,HIGH,MEDIUM
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+          timeout: 10m

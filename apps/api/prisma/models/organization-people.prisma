@@ -1,0 +1,139 @@
+model Organization {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code      String   @unique @db.VarChar(50)
+  name      String
+  timezone  String   @default("Africa/Cairo") @db.VarChar(64)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([id, code])
+  @@map("organizations")
+}
+
+model Branch {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  code           String   @db.VarChar(50)
+  name           String
+  isActive       Boolean  @default(true) @map("is_active")
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, code])
+  @@map("branches")
+}
+
+model Room {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  branchId       String   @map("branch_id") @db.Uuid
+  code           String   @db.VarChar(50)
+  name           String
+  capacity       Int?
+  isActive       Boolean  @default(true) @map("is_active")
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, branchId, code])
+  @@index([organizationId, branchId])
+  @@map("rooms")
+}
+
+model Person {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  publicId       String    @map("public_id") @db.VarChar(30)
+  name           String?
+  birthDate      DateTime? @map("birth_date") @db.Date
+  gender         String?   @db.VarChar(30)
+  version        Int       @default(1)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, publicId])
+  @@index([organizationId, name])
+  @@map("persons")
+}
+
+model PersonContact {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String    @map("organization_id") @db.Uuid
+  personId        String    @map("person_id") @db.Uuid
+  type            String    @db.VarChar(30)
+  rawValue        String    @map("raw_value")
+  normalizedValue String?   @map("normalized_value")
+  isPrimary       Boolean   @default(false) @map("is_primary")
+  verifiedAt      DateTime? @map("verified_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, personId, type])
+  @@index([organizationId, type, normalizedValue])
+  @@map("person_contacts")
+}
+
+model StudentProfile {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  personId       String   @map("person_id") @db.Uuid
+  portalStatus   String   @default("PENDING") @map("portal_status") @db.VarChar(30)
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, personId])
+  @@map("student_profiles")
+}
+
+model StaffProfile {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  personId       String   @map("person_id") @db.Uuid
+  employeeCode   String?  @map("employee_code") @db.VarChar(50)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, personId])
+  @@unique([organizationId, employeeCode])
+  @@map("staff_profiles")
+}
+
+model TrainerProfile {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  personId       String   @map("person_id") @db.Uuid
+  status         String   @default("ACTIVE") @db.VarChar(30)
+  biographyAr    String?  @map("biography_ar")
+  biographyEn    String?  @map("biography_en")
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, personId])
+  @@map("trainer_profiles")
+}
+
+model StaffBranchAssignment {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  staffProfileId String    @map("staff_profile_id") @db.Uuid
+  branchId       String    @map("branch_id") @db.Uuid
+  startsAt       DateTime  @default(now()) @map("starts_at") @db.Timestamptz(6)
+  endsAt         DateTime? @map("ends_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, staffProfileId, endsAt])
+  @@index([organizationId, branchId, endsAt])
+  @@map("staff_branch_assignments")
+}

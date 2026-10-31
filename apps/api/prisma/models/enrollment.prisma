@@ -1,0 +1,94 @@
+model Enrollment {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId   String    @map("organization_id") @db.Uuid
+  studentPersonId  String    @map("student_person_id") @db.Uuid
+  programVersionId String    @map("program_version_id") @db.Uuid
+  billingAccountId String    @map("billing_account_id") @db.Uuid
+  homeBranchId     String    @map("home_branch_id") @db.Uuid
+  kind             String    @default("INDIVIDUAL") @db.VarChar(20)
+  state            String    @default("DRAFT") @db.VarChar(30)
+  activatedAt      DateTime? @map("activated_at") @db.Timestamptz(6)
+  completedAt      DateTime? @map("completed_at") @db.Timestamptz(6)
+  cancelledAt      DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  version          Int       @default(1)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, homeBranchId, state, createdAt(sort: Desc)])
+  @@index([organizationId, studentPersonId, state])
+  @@map("enrollments")
+}
+
+model EnrollmentCohortAssignment {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  enrollmentId   String    @map("enrollment_id") @db.Uuid
+  cohortId       String    @map("cohort_id") @db.Uuid
+  startsAt       DateTime  @map("starts_at") @db.Timestamptz(6)
+  endsAt         DateTime? @map("ends_at") @db.Timestamptz(6)
+  reason         String?
+  createdBy      String    @map("created_by") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, enrollmentId, startsAt])
+  @@index([organizationId, cohortId, startsAt, endsAt])
+  @@map("enrollment_cohort_assignments")
+}
+
+model EnrollmentEvent {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  enrollmentId   String   @map("enrollment_id") @db.Uuid
+  type           String   @db.VarChar(50)
+  fromState      String?  @map("from_state") @db.VarChar(30)
+  toState        String?  @map("to_state") @db.VarChar(30)
+  reason         String?
+  actorUserId    String   @map("actor_user_id") @db.Uuid
+  data           Json?    @db.JsonB
+  occurredAt     DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, enrollmentId, occurredAt])
+  @@map("enrollment_events")
+}
+
+model EnrollmentCancellationRequest {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String    @map("organization_id") @db.Uuid
+  enrollmentId      String    @map("enrollment_id") @db.Uuid
+  enrollmentVersion Int       @map("enrollment_version")
+  status            String    @default("REQUESTED") @db.VarChar(30)
+  reason            String
+  requestedBy       String    @map("requested_by") @db.Uuid
+  decidedBy         String?   @map("decided_by") @db.Uuid
+  decisionReason    String?   @map("decision_reason")
+  decidedAt         DateTime? @map("decided_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, enrollmentId, status])
+  @@map("enrollment_cancellation_requests")
+}
+
+model ModuleRetake {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId         String    @map("organization_id") @db.Uuid
+  enrollmentId           String    @map("enrollment_id") @db.Uuid
+  programVersionModuleId String    @map("program_version_module_id") @db.Uuid
+  targetCohortModuleId   String?   @map("target_cohort_module_id") @db.Uuid
+  status                 String    @default("REQUESTED") @db.VarChar(30)
+  reason                 String?
+  requestedBy            String    @map("requested_by") @db.Uuid
+  decidedBy              String?   @map("decided_by") @db.Uuid
+  decidedAt              DateTime? @map("decided_at") @db.Timestamptz(6)
+  version                Int       @default(1)
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, enrollmentId, status])
+  @@map("module_retakes")
+}

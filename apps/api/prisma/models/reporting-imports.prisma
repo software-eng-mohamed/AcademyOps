@@ -1,0 +1,166 @@
+model ReportExportJob {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  requestedBy    String    @map("requested_by") @db.Uuid
+  reportType     String    @map("report_type") @db.VarChar(50)
+  status         String    @default("QUEUED") @db.VarChar(30)
+  parameters     Json      @db.JsonB
+  scopeSnapshot  Json      @map("scope_snapshot") @db.JsonB
+  fileAssetId    String?   @map("file_asset_id") @db.Uuid
+  errorMessage   String?   @map("error_message")
+  version        Int       @default(1)
+  startedAt      DateTime? @map("started_at") @db.Timestamptz(6)
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz(6)
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, requestedBy, createdAt(sort: Desc)])
+  @@index([organizationId, status, createdAt])
+  @@map("report_export_jobs")
+}
+
+model ImportBatch {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  status         String    @default("UPLOADED") @db.VarChar(30)
+  sourceSha256   String    @map("source_sha256") @db.Char(64)
+  receivedAt     DateTime  @default(now()) @map("received_at") @db.Timestamptz(6)
+  receivedBy     String    @map("received_by") @db.Uuid
+  finalizedAt    DateTime? @map("finalized_at") @db.Timestamptz(6)
+  finalizedBy    String?   @map("finalized_by") @db.Uuid
+  reconciliation Json?     @db.JsonB
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, sourceSha256])
+  @@index([organizationId, status, createdAt(sort: Desc)])
+  @@map("import_batches")
+}
+
+model ImportSourceFile {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  batchId        String   @map("batch_id") @db.Uuid
+  originalName   String   @map("original_name")
+  sha256         String   @db.Char(64)
+  sizeBytes      BigInt   @map("size_bytes")
+  storedPath     String?  @map("stored_path")
+  workbookMeta   Json?    @map("workbook_meta") @db.JsonB
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, batchId, sha256])
+  @@map("import_source_files")
+}
+
+model ImportRow {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId   String   @map("organization_id") @db.Uuid
+  sourceFileId     String   @map("source_file_id") @db.Uuid
+  sheetName        String   @map("sheet_name")
+  rowNumber        Int      @map("row_number")
+  rowHash          String   @map("row_hash") @db.Char(64)
+  rawValues        Json     @map("raw_values") @db.JsonB
+  normalizedValues Json?    @map("normalized_values") @db.JsonB
+  disposition      String   @default("STAGED") @db.VarChar(30)
+  targetType       String?  @map("target_type") @db.VarChar(50)
+  targetId         String?  @map("target_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, sourceFileId, sheetName, rowNumber])
+  @@unique([organizationId, sourceFileId, sheetName, rowHash])
+  @@index([organizationId, sourceFileId, disposition])
+  @@map("import_rows")
+}
+
+model PersonMatchCandidate {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String    @map("organization_id") @db.Uuid
+  importRowId       String    @map("import_row_id") @db.Uuid
+  candidatePersonId String?   @map("candidate_person_id") @db.Uuid
+  score             Decimal   @db.Decimal(5, 4)
+  reasons           Json      @db.JsonB
+  decision          String?   @db.VarChar(30)
+  decidedBy         String?   @map("decided_by") @db.Uuid
+  decidedAt         DateTime? @map("decided_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, importRowId, score(sort: Desc)])
+  @@map("person_match_candidates")
+}
+
+model ImportIssue {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  importRowId    String?   @map("import_row_id") @db.Uuid
+  batchId        String    @map("batch_id") @db.Uuid
+  severity       String    @db.VarChar(20)
+  code           String    @db.VarChar(80)
+  message        String
+  details        Json?     @db.JsonB
+  status         String    @default("OPEN") @db.VarChar(30)
+  resolvedBy     String?   @map("resolved_by") @db.Uuid
+  resolvedAt     DateTime? @map("resolved_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, batchId, status, severity])
+  @@map("import_issues")
+}
+
+model ImportReconciliation {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  batchId        String   @map("batch_id") @db.Uuid
+  metric         String   @db.VarChar(80)
+  dimension      Json?    @db.JsonB
+  sourceValue    Decimal? @map("source_value") @db.Decimal(18, 2)
+  targetValue    Decimal? @map("target_value") @db.Decimal(18, 2)
+  difference     Decimal? @db.Decimal(18, 2)
+  passed         Boolean
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, batchId, passed])
+  @@map("import_reconciliations")
+}
+
+model LegacyReference {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  importRowId    String   @map("import_row_id") @db.Uuid
+  entityType     String   @map("entity_type") @db.VarChar(50)
+  entityId       String   @map("entity_id") @db.Uuid
+  sourceField    String   @map("source_field") @db.VarChar(80)
+  rawValue       String   @map("raw_value")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, entityType, entityId])
+  @@index([organizationId, sourceField, rawValue])
+  @@map("legacy_references")
+}
+
+model LegacyArchiveRecord {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  batchId        String   @map("batch_id") @db.Uuid
+  category       String   @db.VarChar(30)
+  sourceFileId   String   @map("source_file_id") @db.Uuid
+  sheetName      String   @map("sheet_name")
+  rowNumber      Int      @map("row_number")
+  encryptedData  String   @map("encrypted_data")
+  dataHash       String   @map("data_hash") @db.Char(64)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, sourceFileId, sheetName, rowNumber])
+  @@index([organizationId, batchId, category])
+  @@map("legacy_archive_records")
+}

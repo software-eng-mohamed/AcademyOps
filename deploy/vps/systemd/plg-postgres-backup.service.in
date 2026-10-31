@@ -1,0 +1,48 @@
+[Unit]
+Description=PLG encrypted off-host PostgreSQL backup
+Documentation=file://@DEPLOY_DIR@/README.md
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=@DEPLOY_USER@
+Group=@DEPLOY_USER@
+SupplementaryGroups=docker
+WorkingDirectory=@DEPLOY_DIR@
+EnvironmentFile=/etc/plg/backup.env
+RuntimeDirectory=plg-postgres-backup
+RuntimeDirectoryMode=0700
+StateDirectory=plg-backup
+StateDirectoryMode=0755
+UMask=0077
+ExecStart=/usr/bin/flock --nonblock /run/plg-postgres-backup/backup.lock /usr/bin/sh @DEPLOY_DIR@/scripts/backup-postgres.sh
+ExecStartPost=/bin/sh -ceu 'metric=$$(/usr/bin/mktemp /var/lib/plg-backup/.last-success.XXXXXX); printf "# HELP plg_postgres_backup_last_success_timestamp_seconds Unix timestamp of the last remotely verified encrypted PostgreSQL backup.\n# TYPE plg_postgres_backup_last_success_timestamp_seconds gauge\nplg_postgres_backup_last_success_timestamp_seconds %%s\n" "$$(/usr/bin/date +%%s)" > "$$metric"; /usr/bin/chmod 0644 "$$metric"; /usr/bin/mv "$$metric" /var/lib/plg-backup/postgres-backup.prom'
+TimeoutStartSec=2h
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=plg-postgres-backup
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+PrivateMounts=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+ProcSubset=pid
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=@DEPLOY_DIR@/backups /var/lib/plg-backup

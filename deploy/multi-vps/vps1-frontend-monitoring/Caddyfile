@@ -1,0 +1,136 @@
+{
+	admin 0.0.0.0:2019
+	servers {
+		metrics
+		protocols h1 h2 h3
+		timeouts {
+			read_body 120s
+			read_header 10s
+			write 120s
+			idle 2m
+		}
+		max_header_size 32KB
+	}
+}
+
+:80 {
+	encode zstd gzip
+
+	@internalMetrics path /api/v1/internal/metrics
+	respond @internalMetrics "Not Found" 404
+
+	@internalOtpConnector path /api/v1/internal/otp-connector /api/v1/internal/otp-connector/*
+	respond @internalOtpConnector "Not Found" 404
+
+	handle /health {
+		respond "OK" 200
+	}
+
+	# PostHog Analytics Ingest — same-origin proxy to bypass ad-blockers
+	# Privacy: strips all client IP headers; PostHog sees only the server IP
+	handle_path /e/* {
+		reverse_proxy https://{$POSTHOG_INGEST_HOST} {
+			header_up Host {$POSTHOG_INGEST_HOST}
+			header_up -CF-Connecting-IP
+			header_up -Forwarded
+			header_up -True-Client-IP
+			header_up -X-Forwarded-For
+			header_up -X-Real-IP
+		}
+	}
+
+	# API and Socket.IO routes proxied to VPS 2 Backend over private network
+	@backend path /api/* /socket.io /socket.io/*
+	reverse_proxy @backend {$VPS2_PRIVATE_IP}:3001 {$VPS2_PRIVATE_IP}:3003 {
+		header_up X-Forwarded-For {client_ip}
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+		lb_policy round_robin
+		lb_try_duration 5s
+		fail_duration 30s
+		max_fails 3
+		health_uri /api/v1/health/live
+		health_interval 15s
+		health_timeout 3s
+	}
+
+	# Frontend Next.js Standalone (local to VPS 1)
+	reverse_proxy web:3100 {
+		header_up X-Forwarded-For {client_ip}
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+	}
+
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}
+
+:443 {
+	tls internal
+	encode zstd gzip
+
+	@internalMetrics path /api/v1/internal/metrics
+	respond @internalMetrics "Not Found" 404
+
+	@internalOtpConnector path /api/v1/internal/otp-connector /api/v1/internal/otp-connector/*
+	respond @internalOtpConnector "Not Found" 404
+
+	handle /health {
+		respond "OK" 200
+	}
+
+	# PostHog Analytics Ingest — same-origin proxy to bypass ad-blockers
+	handle_path /e/* {
+		reverse_proxy https://{$POSTHOG_INGEST_HOST} {
+			header_up Host {$POSTHOG_INGEST_HOST}
+			header_up -CF-Connecting-IP
+			header_up -Forwarded
+			header_up -True-Client-IP
+			header_up -X-Forwarded-For
+			header_up -X-Real-IP
+		}
+	}
+
+	# API and Socket.IO routes proxied to VPS 2 Backend over private network
+	@backend path /api/* /socket.io /socket.io/*
+	reverse_proxy @backend {$VPS2_PRIVATE_IP}:3001 {$VPS2_PRIVATE_IP}:3003 {
+		header_up X-Forwarded-For {client_ip}
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+		lb_policy round_robin
+		lb_try_duration 5s
+		fail_duration 30s
+		max_fails 3
+		health_uri /api/v1/health/live
+		health_interval 15s
+		health_timeout 3s
+	}
+
+	# Frontend Next.js Standalone (local to VPS 1)
+	reverse_proxy web:3100 {
+		header_up X-Forwarded-For {client_ip}
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+	}
+
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

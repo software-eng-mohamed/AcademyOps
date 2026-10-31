@@ -1,0 +1,45 @@
+services:
+  api-a:
+    depends_on:
+      clamav:
+        condition: service_healthy
+
+  api-b:
+    depends_on:
+      clamav:
+        condition: service_healthy
+
+  clamav:
+    image: clamav/clamav:1.4.3_base@sha256:629a3050df6a706aedb31859fbb8139e9aaf8f56b0ffefbf251b8358a7c9e76c
+    restart: unless-stopped
+    environment:
+      CLAMD_CONF_StreamMaxLength: 10M
+      CLAMD_CONF_MaxFileSize: 10M
+      CLAMD_CONF_MaxScanSize: 25M
+      CLAMD_CONF_MaxRecursion: '8'
+      CLAMD_CONF_MaxFiles: '1000'
+      CLAMD_CONF_MaxThreads: '2'
+      CLAMD_CONF_MaxQueue: '4'
+      CLAMD_CONF_ReadTimeout: '10'
+      CLAMD_CONF_CommandReadTimeout: '5'
+      CLAMD_CONF_ConcurrentDatabaseReload: 'no'
+      FRESHCLAM_CHECKS: '12'
+    volumes: [clamav-signatures:/var/lib/clamav]
+    networks: [data, egress]
+    mem_reservation: 3g
+    mem_limit: ${CLAMAV_MEM_LIMIT:-4g}
+    cpus: ${CLAMAV_CPUS:-1.0}
+    pids_limit: 256
+    security_opt: [no-new-privileges:true]
+    logging:
+      driver: json-file
+      options: { max-size: 20m, max-file: '5' }
+    healthcheck:
+      test: [CMD, /usr/local/bin/clamdcheck.sh]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 6m
+
+volumes:
+  clamav-signatures:

@@ -1,0 +1,41 @@
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:2026.8.0@sha256:2535e54b16adf1d50630f99d0886471926c5ef3f6b328100ec6589f731c48969
+    restart: unless-stopped
+    command:
+      - tunnel
+      - --no-autoupdate
+      - --metrics
+      - 127.0.0.1:2000
+      - run
+      - --token-file
+      - /run/secrets/cloudflared_token
+    secrets: [cloudflared_token]
+    networks:
+      origin:
+        ipv4_address: 172.30.241.2
+      egress:
+    user: 65532:65532
+    read_only: true
+    tmpfs: ['/tmp:size=16m,uid=65532,gid=65532,mode=0700']
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: ${CLOUDFLARED_MEM_LIMIT:-256m}
+    cpus: ${CLOUDFLARED_CPUS:-0.5}
+    logging:
+      driver: json-file
+      options: { max-size: 20m, max-file: '5' }
+    depends_on:
+      caddy:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, cloudflared, tunnel, --metrics, 127.0.0.1:2000, ready]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+secrets:
+  cloudflared_token:
+    file: ./runtime/cloudflared-token

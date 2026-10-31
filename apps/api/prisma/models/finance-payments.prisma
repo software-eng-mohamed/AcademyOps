@@ -1,0 +1,176 @@
+model PricingAgreement {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  enrollmentId   String    @map("enrollment_id") @db.Uuid
+  version        Int
+  lockVersion    Int       @default(1) @map("lock_version")
+  status         String    @default("DRAFT") @db.VarChar(30)
+  currencyCode   String    @default("EGP") @map("currency_code") @db.Char(3)
+  subtotal       Decimal   @db.Decimal(14, 2)
+  discountAmount Decimal   @default(0) @map("discount_amount") @db.Decimal(14, 2)
+  totalAmount    Decimal   @map("total_amount") @db.Decimal(14, 2)
+  proposedBy     String    @map("proposed_by") @db.Uuid
+  approvedBy     String?   @map("approved_by") @db.Uuid
+  approvedAt     DateTime? @map("approved_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, enrollmentId, version])
+  @@index([organizationId, enrollmentId, status])
+  @@map("pricing_agreements")
+}
+
+model PricingAgreementLine {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId     String   @map("organization_id") @db.Uuid
+  pricingAgreementId String   @map("pricing_agreement_id") @db.Uuid
+  type               String   @db.VarChar(30)
+  descriptionAr      String   @map("description_ar")
+  descriptionEn      String   @map("description_en")
+  quantity           Decimal  @default(1) @db.Decimal(10, 2)
+  unitAmount         Decimal  @map("unit_amount") @db.Decimal(14, 2)
+  lineAmount         Decimal  @map("line_amount") @db.Decimal(14, 2)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, pricingAgreementId])
+  @@map("pricing_agreement_lines")
+}
+
+model InstallmentSchedule {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId     String    @map("organization_id") @db.Uuid
+  enrollmentId       String    @map("enrollment_id") @db.Uuid
+  pricingAgreementId String    @map("pricing_agreement_id") @db.Uuid
+  version            Int
+  lockVersion        Int       @default(1) @map("lock_version")
+  status             String    @default("DRAFT") @db.VarChar(30)
+  approvedBy         String?   @map("approved_by") @db.Uuid
+  approvedAt         DateTime? @map("approved_at") @db.Timestamptz(6)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, pricingAgreementId, version])
+  @@index([organizationId, enrollmentId, status])
+  @@map("installment_schedules")
+}
+
+model Installment {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  scheduleId     String   @map("schedule_id") @db.Uuid
+  ordinal        Int
+  dueDate        DateTime @map("due_date") @db.Date
+  amount         Decimal  @db.Decimal(14, 2)
+  debitEntryId   String?  @map("debit_entry_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, scheduleId, ordinal])
+  @@unique([organizationId, debitEntryId])
+  @@index([organizationId, dueDate])
+  @@map("installments")
+}
+
+model LedgerEntry {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId   String   @map("organization_id") @db.Uuid
+  billingAccountId String   @map("billing_account_id") @db.Uuid
+  enrollmentId     String?  @map("enrollment_id") @db.Uuid
+  direction        String   @db.VarChar(10)
+  entryType        String   @map("entry_type") @db.VarChar(40)
+  amount           Decimal  @db.Decimal(14, 2)
+  currencyCode     String   @default("EGP") @map("currency_code") @db.Char(3)
+  reversalOfId     String?  @map("reversal_of_id") @db.Uuid
+  sourceType       String   @map("source_type") @db.VarChar(50)
+  sourceId         String   @map("source_id") @db.Uuid
+  description      String?
+  postedAt         DateTime @default(now()) @map("posted_at") @db.Timestamptz(6)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, reversalOfId])
+  @@unique([organizationId, sourceType, sourceId])
+  @@index([organizationId, billingAccountId, postedAt, id])
+  @@index([organizationId, enrollmentId, postedAt])
+  @@map("ledger_entries")
+}
+
+model LedgerAllocation {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  creditEntryId  String   @map("credit_entry_id") @db.Uuid
+  debitEntryId   String   @map("debit_entry_id") @db.Uuid
+  amount         Decimal  @db.Decimal(14, 2)
+  allocatedAt    DateTime @default(now()) @map("allocated_at") @db.Timestamptz(6)
+  createdBy      String   @map("created_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  reversalOfAllocationId String? @map("reversal_of_allocation_id") @db.Uuid
+  adjustmentEntryId      String? @map("adjustment_entry_id") @db.Uuid
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, adjustmentEntryId, reversalOfAllocationId], map: "allocation_adjustment_source_key")
+  @@index([organizationId, reversalOfAllocationId], map: "allocation_reversal_source_idx")
+  @@index([organizationId, creditEntryId])
+  @@index([organizationId, debitEntryId])
+  @@map("ledger_allocations")
+}
+
+model PaymentMethod {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId       String   @map("organization_id") @db.Uuid
+  code                 String   @db.VarChar(50)
+  name                 String
+  verificationRequired Boolean  @default(true) @map("verification_required")
+  isActive             Boolean  @default(true) @map("is_active")
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, code])
+  @@map("payment_methods")
+}
+
+model Payment {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String    @map("organization_id") @db.Uuid
+  billingAccountId  String    @map("billing_account_id") @db.Uuid
+  enrollmentId      String?   @map("enrollment_id") @db.Uuid
+  ledgerEntryId     String?   @map("ledger_entry_id") @db.Uuid
+  methodId          String    @map("method_id") @db.Uuid
+  status            String    @db.VarChar(30)
+  amount            Decimal   @db.Decimal(14, 2)
+  currencyCode      String    @default("EGP") @map("currency_code") @db.Char(3)
+  externalReference String?   @map("external_reference")
+  idempotencyKey    String    @map("idempotency_key") @db.VarChar(128)
+  receivedAt        DateTime  @map("received_at") @db.Timestamptz(6)
+  postedAt          DateTime? @map("posted_at") @db.Timestamptz(6)
+  createdBy         String    @map("created_by") @db.Uuid
+  version           Int       @default(1)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, idempotencyKey])
+  @@unique([organizationId, ledgerEntryId])
+  @@index([organizationId, status, receivedAt(sort: Desc)])
+  @@index([organizationId, billingAccountId, receivedAt])
+  @@map("payments")
+}
+
+model PaymentEvent {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  paymentId      String   @map("payment_id") @db.Uuid
+  fromStatus     String?  @map("from_status") @db.VarChar(30)
+  toStatus       String   @map("to_status") @db.VarChar(30)
+  reason         String?
+  actorUserId    String   @map("actor_user_id") @db.Uuid
+  occurredAt     DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, paymentId, occurredAt])
+  @@map("payment_events")
+}

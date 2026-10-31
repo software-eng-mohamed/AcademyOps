@@ -1,0 +1,17 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": [
+    "dev-accounts.ts",
+    "e2e-fixture.ts",
+    "e2e-fixture/**/*.ts",
+    "load-fixture.ts",
+    "load-fixture/**/*.ts",
+    "provision-otp-operator.ts"
+  ]
+}

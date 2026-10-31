@@ -1,0 +1,57 @@
+FROM node:22.23.4-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS build
+
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+
+WORKDIR /app
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates openssl \
+  && rm -rf /var/lib/apt/lists/* \
+  && corepack enable
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json ./
+COPY patches patches
+COPY packages/contracts/package.json packages/contracts/package.json
+COPY apps/api/package.json apps/api/package.json
+COPY apps/worker/package.json apps/worker/package.json
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+  pnpm config set store-dir /pnpm/store \
+  && pnpm install --frozen-lockfile
+
+COPY . .
+
+RUN pnpm --filter @academyops/api prisma:generate \
+  && pnpm --filter @academyops/contracts build \
+  && pnpm --filter @academyops/api build \
+  && pnpm --filter @academyops/worker build \
+  && pnpm --filter @academyops/api --prod deploy --legacy /prod/api \
+  && pnpm --filter @academyops/worker --prod deploy --legacy /prod/worker \
+  && cd /prod/api \
+  && node node_modules/prisma/build/index.js generate --schema=prisma \
+  && api_client="$(echo /prod/api/node_modules/.pnpm/@prisma+client@*/node_modules/.prisma/client)" \
+  && worker_client_modules="$(echo /prod/worker/node_modules/.pnpm/@prisma+client@*/node_modules)" \
+  && worker_client="$worker_client_modules/.prisma/client" \
+  && test -d "$api_client" \
+  && test -d "$worker_client_modules" \
+  && mkdir -p "$worker_client" \
+  && cp -a "$api_client/." "$worker_client/" \
+  && find /prod/api/dist /prod/worker/dist -type f \
+    \( -name '*.js.map' -o -name '*.d.ts' -o -name '*.d.ts.map' \) -delete
+
+FROM gcr.io/distroless/nodejs22-debian13:nonroot AS runtime
+
+ENV NODE_ENV=production
+
+WORKDIR /app
+
+COPY --from=build /usr/local/bin/node /nodejs/bin/node
+COPY --from=build /prod/api /app/api
+COPY --from=build /prod/worker /app/worker
+
+USER 65532:65532
+
+EXPOSE 10000
+
+CMD ["api/dist/main.js"]

@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PLG synthetic load session pool",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "marker",
+    "fixtureMarker",
+    "revision",
+    "organization",
+    "targetOrigin",
+    "runner",
+    "targets",
+    "sessions"
+  ],
+  "properties": {
+    "marker": { "const": "plg-synthetic-load-sessions-v1" },
+    "fixtureMarker": { "const": "plg-synthetic-e2e-v1" },
+    "revision": {
+      "type": "string",
+      "pattern": "^(local-worktree|[A-Fa-f0-9]{7,64})$"
+    },
+    "organization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "name"],
+      "properties": {
+        "code": { "const": "E2EACADEMY" },
+        "name": { "type": "string", "pattern": "SYNTHETIC E2E" }
+      }
+    },
+    "targetOrigin": { "type": "string", "format": "uri" },
+    "runner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "count"],
+      "properties": {
+        "index": { "type": "integer", "minimum": 0 },
+        "count": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "targets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attendanceSessionId"],
+      "properties": {
+        "attendanceSessionId": { "type": "string", "format": "uuid" }
+      }
+    },
+    "sessions": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "syntheticSubjectId", "expiresAt", "cookies"],
+        "allOf": [
+          {
+            "if": { "properties": { "role": { "const": "student" } } },
+            "then": { "required": ["enrollmentId"] },
+            "else": { "not": { "required": ["enrollmentId"] } }
+          }
+        ],
+        "properties": {
+          "role": { "enum": ["student", "attendance", "accounts", "owner"] },
+          "syntheticSubjectId": {
+            "type": "string",
+            "pattern": "^load-(student|attendance|accounts|owner)-[0-9]+$"
+          },
+          "enrollmentId": { "type": "string", "format": "uuid" },
+          "expiresAt": { "type": "string", "format": "date-time" },
+          "cookies": {
+            "type": "object",
+            "minProperties": 2,
+            "maxProperties": 2,
+            "additionalProperties": { "type": "string", "minLength": 20, "maxLength": 512 }
+          }
+        }
+      }
+    }
+  }
+}

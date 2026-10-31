@@ -1,0 +1,76 @@
+name: Browser acceptance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  chromium:
+    name: Chromium UI and real API boundaries
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17.6-alpine@sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94
+        env:
+          POSTGRES_DB: plg_browser_test
+          POSTGRES_USER: plg
+          POSTGRES_PASSWORD: plg_ci_only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U plg -d plg_browser_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7.4.5-alpine@sha256:bb186d083732f669da90be8b0f975a37812b15e913465bb14d845db72a4e3e08
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://plg:plg_ci_only@127.0.0.1:5432/plg_browser_test
+      DIRECT_URL: postgresql://plg:plg_ci_only@127.0.0.1:5432/plg_browser_test
+      REDIS_URL: redis://127.0.0.1:6379
+      WEB_ORIGIN: http://127.0.0.1:3140
+      API_ORIGIN: http://127.0.0.1:3999
+      API_INTERNAL_URL: http://127.0.0.1:3999/api/v1
+      CLAMAV_MODE: disabled
+      PLG_OWNER_QA: 'true'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 11.16.0
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install immutable dependencies and Chromium
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+      - name: Initialize synthetic-only API prerequisites
+        run: |
+          node scripts/create-browser-test-env.mjs >> "$GITHUB_ENV"
+          pnpm --filter @academyops/contracts build
+          pnpm --filter @academyops/api-client build
+          pnpm --filter @academyops/ui build
+          pnpm db:generate
+          pnpm db:deploy
+      - name: Exercise real API guards and persistence through Chromium
+        env:
+          PLG_BROWSER_API_TEST: 'true'
+        run: pnpm --filter @academyops/api exec vitest run test/browser/browser-api.integration.test.ts --maxWorkers=1
+      - name: Exercise localized UI and navigation against controlled API fixtures
+        run: pnpm web:e2e --workers=1

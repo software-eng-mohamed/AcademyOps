@@ -1,0 +1,88 @@
+import type { Locale } from '@/lib/locales';
+
+const ar = {
+  acceptedEmail: 'إذا كان البريد مسجلًا، ستصلك رسالة تحتوي على رابط تغيير كلمة المرور.',
+  acceptedPhone: 'إذا كان الرقم مسجلًا، ستصلك رسالة واتساب تحتوي على رابط تغيير كلمة المرور.',
+  acceptedTitle: 'راجع رسائلك',
+  backToLogin: 'الرجوع لتسجيل الدخول',
+  confirmPassword: 'تأكيد كلمة المرور الجديدة',
+  confirmPasswordPlaceholder: 'أعد إدخال كلمة المرور الجديدة',
+  email: 'البريد الإلكتروني',
+  emailPlaceholder: 'name@academy.com',
+  forgotEmailDescription: 'أدخل بريدك الإلكتروني وسنرسل لك رابطًا آمنًا لتغيير كلمة المرور.',
+  forgotEmailTitle: 'استرجاع كلمة المرور بالبريد الإلكتروني',
+  forgotPhoneDescription: 'أدخل رقم واتساب وسنرسل لك رابطًا آمنًا لتغيير كلمة المرور.',
+  forgotPhoneTitle: 'استرجاع كلمة المرور برقم الهاتف',
+  genericError: 'تعذر تنفيذ الطلب الآن. حاول مرة أخرى.',
+  hidePassword: 'إخفاء كلمة المرور',
+  invalidIdentifier: 'أدخل بيانات صحيحة.',
+  invalidLink: 'رابط تغيير كلمة المرور غير صحيح أو انتهت صلاحيته.',
+  newPassword: 'كلمة المرور الجديدة',
+  newPasswordPlaceholder: 'أدخل كلمة المرور الجديدة',
+  passwordHint: 'استخدم 12 حرفًا على الأقل.',
+  passwordMismatch: 'كلمتا المرور غير متطابقتين.',
+  passwordReuseForbidden: 'يجب أن تختلف كلمة المرور الجديدة عن كلمة المرور الحالية.',
+  passwordTooLong: 'كلمة المرور لا يمكن أن تتجاوز 128 حرفًا.',
+  phone: 'رقم الهاتف',
+  phonePlaceholder: '10 0000 0000',
+  resetDescription: 'اختر كلمة مرور قوية جديدة لحسابك.',
+  resetMetadataTitle: 'تغيير كلمة المرور',
+  resetPassword: 'تغيير كلمة المرور',
+  resetSuccess: 'تم تغيير كلمة المرور. يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.',
+  resetTitle: 'تعيين كلمة مرور جديدة',
+  resetting: 'جارٍ تغيير كلمة المرور…',
+  required: 'هذا الحقل مطلوب.',
+  sendEmailLink: 'إرسال الرابط بالبريد الإلكتروني',
+  sendPhoneLink: 'إرسال الرابط عبر واتساب',
+  sending: 'جارٍ الإرسال…',
+  showPassword: 'إظهار كلمة المرور',
+  supportId: 'رقم التتبع',
+};
+
+export type PasswordRecoveryCopy = {
+  [Key in keyof typeof ar]: string;
+};
+
+const en: PasswordRecoveryCopy = {
+  acceptedEmail: 'If the email is registered, you will receive a password-reset link.',
+  acceptedPhone: 'If the number is registered, you will receive a password-reset link on WhatsApp.',
+  acceptedTitle: 'Check your messages',
+  backToLogin: 'Back to sign in',
+  confirmPassword: 'Confirm new password',
+  confirmPasswordPlaceholder: 'Re-enter your new password',
+  email: 'Email',
+  emailPlaceholder: 'name@academy.com',
+  forgotEmailDescription: 'Enter your email and we will send you a secure password-reset link.',
+  forgotEmailTitle: 'Recover your password by email',
+  forgotPhoneDescription:
+    'Enter your WhatsApp number and we will send you a secure password-reset link.',
+  forgotPhoneTitle: 'Recover your password by phone',
+  genericError: 'We could not complete the request. Please try again.',
+  hidePassword: 'Hide password',
+  invalidIdentifier: 'Enter valid account details.',
+  invalidLink: 'This password-reset link is invalid or has expired.',
+  newPassword: 'New password',
+  newPasswordPlaceholder: 'Enter your new password',
+  passwordHint: 'Use at least 12 characters.',
+  passwordMismatch: 'The passwords do not match.',
+  passwordReuseForbidden: 'Your new password must be different from your current password.',
+  passwordTooLong: 'Password cannot exceed 128 characters.',
+  phone: 'Phone',
+  phonePlaceholder: '10 0000 0000',
+  resetDescription: 'Choose a strong new password for your account.',
+  resetMetadataTitle: 'Reset password',
+  resetPassword: 'Reset password',
+  resetSuccess: 'Your password has been changed. You can now sign in with the new password.',
+  resetTitle: 'Set a new password',
+  resetting: 'Resetting password…',
+  required: 'This field is required.',
+  sendEmailLink: 'Send link by email',
+  sendPhoneLink: 'Send link on WhatsApp',
+  sending: 'Sending…',
+  showPassword: 'Show password',
+  supportId: 'Tracking ID',
+};
+
+export function getPasswordRecoveryCopy(locale: Locale): PasswordRecoveryCopy {
+  return locale === 'ar' ? ar : en;
+}

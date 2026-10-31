@@ -1,0 +1,17 @@
+node_modules
+.agents
+dist
+.next
+coverage
+tmp
+pnpm-lock.yaml
+apps/api/prisma/migrations
+apps/otp-connector/.otp-connector-session
+apps/otp-connector/.wwebjs_cache
+# apps/web is formatted and linted by Biome (see apps/web/biome.json).
+apps/web
+apps/api-catalog-site/.wrangler
+apps/api-catalog-site/next-env.d.ts
+apps/api/src/openapi-response-types.generated.ts
+packages/ui/src/storybook.css
+test-results

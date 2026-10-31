@@ -1,0 +1,216 @@
+model PaymentGatewayAttempt {
+  id                       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId           String   @map("organization_id") @db.Uuid
+  installmentId            String   @map("installment_id") @db.Uuid
+  enrollmentId             String   @map("enrollment_id") @db.Uuid
+  billingAccountId         String   @map("billing_account_id") @db.Uuid
+  paymentId                String?  @map("payment_id") @db.Uuid
+  provider                 String   @default("PAYMOB") @db.VarChar(30)
+  status                   String   @default("CREATED") @db.VarChar(30)
+  internalReference        String   @unique @map("internal_reference") @db.VarChar(100)
+  providerIntentionId      String?  @map("provider_intention_id") @db.VarChar(100)
+  providerTransactionId    String?  @map("provider_transaction_id") @db.VarChar(100)
+  amount                   Decimal  @db.Decimal(14, 2)
+  currencyCode             String   @default("EGP") @map("currency_code") @db.Char(3)
+  idempotencyKey           String   @map("idempotency_key") @db.VarChar(128)
+  checkoutSecretCiphertext String?  @map("checkout_secret_ciphertext")
+  failureCode              String?  @map("failure_code") @db.VarChar(100)
+  createdBy                String   @map("created_by") @db.Uuid
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, provider, idempotencyKey])
+  @@unique([organizationId, paymentId])
+  @@index([organizationId, installmentId, status])
+  @@index([organizationId, provider, providerIntentionId])
+  @@map("payment_gateway_attempts")
+}
+
+model PaymentGatewayEvent {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String    @map("organization_id") @db.Uuid
+  attemptId       String    @map("attempt_id") @db.Uuid
+  provider        String    @default("PAYMOB") @db.VarChar(30)
+  providerEventId String    @map("provider_event_id") @db.VarChar(100)
+  eventType       String    @map("event_type") @db.VarChar(50)
+  payloadDigest   String    @map("payload_digest") @db.Char(64)
+  receivedAt      DateTime  @default(now()) @map("received_at") @db.Timestamptz(6)
+  processedAt     DateTime? @map("processed_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, provider, providerEventId, eventType])
+  @@index([organizationId, attemptId, receivedAt])
+  @@map("payment_gateway_events")
+}
+
+model DocumentSequence {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  fiscalYear     Int      @map("fiscal_year")
+  documentType   String   @map("document_type") @db.VarChar(30)
+  nextValue      BigInt   @default(1) @map("next_value")
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, fiscalYear, documentType])
+  @@map("document_sequences")
+}
+
+model InternalInvoice {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId   String    @map("organization_id") @db.Uuid
+  billingAccountId String    @map("billing_account_id") @db.Uuid
+  status           String    @default("DRAFT") @db.VarChar(30)
+  fiscalYear       Int?      @map("fiscal_year")
+  serialNumber     BigInt?   @map("serial_number")
+  currencyCode     String    @default("EGP") @map("currency_code") @db.Char(3)
+  subtotal         Decimal   @db.Decimal(14, 2)
+  taxAmount        Decimal   @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  totalAmount      Decimal   @map("total_amount") @db.Decimal(14, 2)
+  customerSnapshot Json?     @map("customer_snapshot") @db.JsonB
+  issuedAt         DateTime? @map("issued_at") @db.Timestamptz(6)
+  voidedAt         DateTime? @map("voided_at") @db.Timestamptz(6)
+  version          Int       @default(1)
+  createdBy        String    @map("created_by") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, fiscalYear, serialNumber])
+  @@index([organizationId, billingAccountId, issuedAt])
+  @@map("internal_invoices")
+}
+
+model InvoiceLine {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  invoiceId      String   @map("invoice_id") @db.Uuid
+  ledgerEntryId  String?  @map("ledger_entry_id") @db.Uuid
+  descriptionAr  String   @map("description_ar")
+  descriptionEn  String   @map("description_en")
+  quantity       Decimal  @default(1) @db.Decimal(10, 2)
+  unitAmount     Decimal  @map("unit_amount") @db.Decimal(14, 2)
+  taxAmount      Decimal  @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  lineTotal      Decimal  @map("line_total") @db.Decimal(14, 2)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, invoiceId])
+  @@index([organizationId, ledgerEntryId])
+  @@map("invoice_lines")
+}
+
+model InternalReceipt {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId   String   @map("organization_id") @db.Uuid
+  paymentId        String   @map("payment_id") @db.Uuid
+  billingAccountId String   @map("billing_account_id") @db.Uuid
+  fiscalYear       Int      @map("fiscal_year")
+  serialNumber     BigInt   @map("serial_number")
+  amount           Decimal  @db.Decimal(14, 2)
+  currencyCode     String   @default("EGP") @map("currency_code") @db.Char(3)
+  payerSnapshot    Json     @map("payer_snapshot") @db.JsonB
+  issuedAt         DateTime @default(now()) @map("issued_at") @db.Timestamptz(6)
+  createdBy        String   @map("created_by") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, paymentId])
+  @@unique([organizationId, fiscalYear, serialNumber])
+  @@map("internal_receipts")
+}
+
+model CreditNote {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  invoiceId      String   @map("invoice_id") @db.Uuid
+  ledgerEntryId  String   @map("ledger_entry_id") @db.Uuid
+  fiscalYear     Int      @map("fiscal_year")
+  serialNumber   BigInt   @map("serial_number")
+  amount         Decimal  @db.Decimal(14, 2)
+  reason         String
+  issuedBy       String   @map("issued_by") @db.Uuid
+  issuedAt       DateTime @default(now()) @map("issued_at") @db.Timestamptz(6)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, ledgerEntryId])
+  @@unique([organizationId, fiscalYear, serialNumber])
+  @@map("credit_notes")
+}
+
+model RefundRequest {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String    @map("organization_id") @db.Uuid
+  paymentId       String    @map("payment_id") @db.Uuid
+  status          String    @default("REQUESTED") @db.VarChar(30)
+  requestedAmount Decimal   @map("requested_amount") @db.Decimal(14, 2)
+  reason          String
+  requestedBy     String    @map("requested_by") @db.Uuid
+  approvedBy      String?   @map("approved_by") @db.Uuid
+  decidedBy       String?   @map("decided_by") @db.Uuid
+  decisionReason  String?   @map("decision_reason")
+  decidedAt       DateTime? @map("decided_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, paymentId, status])
+  @@map("refund_requests")
+}
+
+model PaymentReversalRequest {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  paymentId      String    @map("payment_id") @db.Uuid
+  status         String    @default("REQUESTED") @db.VarChar(30)
+  reason         String
+  requestedBy    String    @map("requested_by") @db.Uuid
+  approvedBy     String?   @map("approved_by") @db.Uuid
+  decidedBy      String?   @map("decided_by") @db.Uuid
+  decisionReason String?   @map("decision_reason")
+  decidedAt      DateTime? @map("decided_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, paymentId, status])
+  @@map("payment_reversal_requests")
+}
+
+model Refund {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  refundRequestId String   @map("refund_request_id") @db.Uuid
+  paymentId       String   @map("payment_id") @db.Uuid
+  ledgerEntryId   String   @map("ledger_entry_id") @db.Uuid
+  amount          Decimal  @db.Decimal(14, 2)
+  processedBy     String   @map("processed_by") @db.Uuid
+  processedAt     DateTime @default(now()) @map("processed_at") @db.Timestamptz(6)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, refundRequestId])
+  @@unique([organizationId, ledgerEntryId])
+  @@index([organizationId, paymentId])
+  @@map("refunds")
+}
+
+model IdempotencyRecord {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  operation      String    @db.VarChar(80)
+  key            String    @db.VarChar(128)
+  requestHash    String    @map("request_hash") @db.VarChar(128)
+  statusCode     Int?      @map("status_code")
+  responseBody   Json?     @map("response_body") @db.JsonB
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, operation, key])
+  @@index([expiresAt])
+  @@map("idempotency_records")
+}

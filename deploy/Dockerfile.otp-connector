@@ -23,7 +23,7 @@ RUN pnpm --filter @academyops/otp-connector build \
   && find /prod/otp-connector/dist -type f \
     \( -name '*.js.map' -o -name '*.d.ts' -o -name '*.d.ts.map' \) -delete
 
-FROM ghcr.io/puppeteer/puppeteer:25.16.0@sha256:956a72e3d523c76606efaad23392fbe33950370189f749715222c7427f57392b AS runtime
+FROM ghcr.io/puppeteer/puppeteer:25.18.1@sha256:e94e5de180f0488aceebda0e8c32404075c089ec2ac8e9f2f4ec47034a049126 AS runtime
 
 USER root
 RUN apt-get update \
